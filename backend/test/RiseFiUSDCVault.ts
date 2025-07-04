@@ -101,10 +101,12 @@ describe("RiseFiUSDCVault", function () {
 
   describe("Negative path tests", function () {
     it("Should revert deposit without approval", async function () {
-      const { vault, owner } = await loadFixture(deployVaultFixture);
+      const { vault, mockUSDC, owner } = await loadFixture(deployVaultFixture);
       const depositAmount = hre.ethers.parseUnits("100", 6);
 
-      await expect(vault.deposit(depositAmount, owner.address)).to.be.reverted;
+      await expect(
+        vault.deposit(depositAmount, owner.address)
+      ).to.be.revertedWithCustomError(mockUSDC, "ERC20InsufficientAllowance");
     });
 
     it("Should revert deposit with insufficient balance", async function () {
@@ -118,7 +120,7 @@ describe("RiseFiUSDCVault", function () {
 
       await expect(
         vault.connect(otherAccount).deposit(depositAmount, otherAccount.address)
-      ).to.be.reverted;
+      ).to.be.revertedWithCustomError(mockUSDC, "ERC20InsufficientBalance");
     });
 
     it("Should revert withdraw without shares", async function () {
@@ -131,7 +133,7 @@ describe("RiseFiUSDCVault", function () {
           otherAccount.address,
           otherAccount.address
         )
-      ).to.be.reverted;
+      ).to.be.revertedWithCustomError(vault, "ERC4626ExceededMaxWithdraw");
     });
 
     it("Should revert withdraw more than available shares", async function () {
@@ -142,8 +144,9 @@ describe("RiseFiUSDCVault", function () {
       await mockUSDC.approve(vault.target, depositAmount);
       await vault.deposit(depositAmount, owner.address);
 
-      await expect(vault.withdraw(withdrawAmount, owner.address, owner.address))
-        .to.be.reverted;
+      await expect(
+        vault.withdraw(withdrawAmount, owner.address, owner.address)
+      ).to.be.revertedWithCustomError(vault, "ERC4626ExceededMaxWithdraw");
     });
 
     it("Should handle zero amount deposits gracefully", async function () {
