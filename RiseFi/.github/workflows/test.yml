@@ -1,4 +1,4 @@
-name: CI
+name: CI foundry
 
 on:
   push:
@@ -12,6 +12,7 @@ jobs:
   check:
     name: Foundry project
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
@@ -38,3 +39,12 @@ jobs:
         run: |
           forge test -vvv
         id: test
+
+      - name: Install Slither
+        run: |
+          sudo apt-get update && sudo apt-get install -y python3-pip
+          pip3 install slither-analyzer
+
+      - name: Run Slither analysis
+        run: |
+          slither . --filter-paths "lib/" --fail-high
