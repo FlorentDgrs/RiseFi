@@ -14,7 +14,7 @@ contract rfUSDCTest is Test {
         token = new MockedUSDC();
     }
 
-    function test_NameAndSymbol() public {
+    function test_NameAndSymbol() public view {
         assertEq(token.name(), "Mocked USDC");
         assertEq(token.symbol(), "mUSDC");
     }
