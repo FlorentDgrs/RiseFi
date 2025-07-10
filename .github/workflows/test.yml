@@ -1,0 +1,50 @@
+name: CI foundry
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  FOUNDRY_PROFILE: ci
+
+jobs:
+  check:
+    name: Foundry project
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Show Forge version
+        run: forge --version
+        working-directory: RiseFi
+
+      - name: Run Forge fmt
+        run: forge fmt --check
+        working-directory: RiseFi
+        id: fmt
+
+      - name: Run Forge build
+        run: forge build --sizes
+        working-directory: RiseFi
+        id: build
+
+      - name: Run Forge tests
+        run: forge test -vvv
+        working-directory: RiseFi
+        id: test
+
+      - name: Install Slither
+        run: |
+          sudo apt-get update && sudo apt-get install -y python3-pip
+          pip3 install slither-analyzer
+
+      - name: Run Slither analysis
+        run: slither . --filter-paths "lib/" --fail-high
+        working-directory: RiseFi
