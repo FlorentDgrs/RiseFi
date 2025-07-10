@@ -30,12 +30,7 @@ contract rfUSDCTest is Test {
     }
 
     function test_RevertIfNotOwnerMints() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                Ownable.OwnableUnauthorizedAccount.selector,
-                user
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user));
         vm.prank(user);
         token.mint(user, 1000);
     }
