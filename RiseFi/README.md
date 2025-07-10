@@ -1,68 +1,148 @@
-## Foundry
-
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+# RiseFi Smart Contracts
 
 ![CI](https://github.com/FlorentDgrs/RiseFiV3/actions/workflows/test.yml/badge.svg)
 
-Foundry consists of:
+Smart contracts for the **RiseFi** decentralized vault platform, built with Foundry.
 
-- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
-- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
-- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
-- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+## 📋 Contracts
 
-## Documentation
+### MockedUSDC.sol
 
-https://book.getfoundry.sh/
+A mock USDC token for testing purposes:
 
-## Usage
+- ERC-20 compliant
+- Mintable by owner
+- Used for vault testing
+
+```solidity
+contract MockedUSDC is ERC20, Ownable {
+    constructor() ERC20("Mocked USDC", "mUSDC") Ownable(msg.sender) {}
+
+    function mint(address to, uint256 amount) public onlyOwner {
+        _mint(to, amount);
+    }
+}
+```
+
+## 🚀 Development
+
+### Prerequisites
+
+- [Foundry](https://getfoundry.sh/) installed
+
+### Installation
+
+```bash
+# Install dependencies
+forge install
+```
 
 ### Build
 
-```shell
-$ forge build
+```bash
+forge build
 ```
 
 ### Test
 
-```shell
-$ forge test
+```bash
+# Run all tests
+forge test
+
+# Run with verbose output
+forge test -vvv
+
+# Run specific test
+forge test --match-test testNameAndSymbol
 ```
 
 ### Format
 
-```shell
-$ forge fmt
+```bash
+forge fmt
 ```
 
-### Gas Snapshots
+### Gas Analysis
 
-```shell
-$ forge snapshot
+```bash
+forge snapshot
 ```
 
-### Anvil
+## 🧪 Testing
 
-```shell
-$ anvil
+### Current Tests
+
+- `MockedUSDC.t.sol`: Tests for the mock USDC token
+  - Name and symbol verification
+  - Minting functionality
+  - Owner permissions
+
+### Running Tests
+
+```bash
+# Run all tests
+forge test
+
+# Run with coverage
+forge coverage
+
+# Run specific test file
+forge test --match-path test/MockedUSDC.t.sol
 ```
 
-### Deploy
+## 📁 Project Structure
 
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
+```
+RiseFi/
+├── src/
+│   └── MockedUSDC.sol      ← Mock USDC token
+├── test/
+│   └── MockedUSDC.t.sol    ← Token tests
+├── script/                  ← Deployment scripts
+├── lib/                     ← Dependencies
+└── foundry.toml            ← Foundry configuration
 ```
 
-### Cast
+## 🔧 Configuration
 
-```shell
-$ cast <subcommand>
+The project uses Foundry with the following configuration:
+
+- Solidity version: ^0.8.30
+- OpenZeppelin contracts for ERC-20 implementation
+- Forge-std for testing utilities
+
+## 🚀 Deployment
+
+### Local Development
+
+```bash
+# Start local node
+anvil
+
+# Deploy contracts
+forge script script/Deploy.s.sol --rpc-url http://localhost:8545 --private-key 0x...
 ```
 
-### Help
+### Testnet/Mainnet
 
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
+```bash
+# Deploy to testnet
+forge script script/Deploy.s.sol --rpc-url <RPC_URL> --private-key <PRIVATE_KEY>
 ```
+
+## 📚 Documentation
+
+- [Foundry Book](https://book.getfoundry.sh/)
+- [OpenZeppelin Contracts](https://docs.openzeppelin.com/contracts/)
+- [ERC-4626 Standard](https://eips.ethereum.org/EIPS/eip-4626)
+
+## 🤝 Contributing
+
+1. Follow the coding standards
+2. Add tests for new features
+3. Ensure all tests pass
+4. Update documentation
+
+## 📄 License
+
+MIT License - see LICENSE file for details
