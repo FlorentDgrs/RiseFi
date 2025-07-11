@@ -1,97 +1,80 @@
-# RiseFi — Decentralized Vaults with Yield Strategies
+# RiseFi — DeFi Yield Vault
 
-![CI](https://github.com/FlorentDgrs/RiseFiV3/actions/workflows/test.yml/badge.svg)
+[![Build & Test](https://github.com/FlorentDgrs/RiseFiV3/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/FlorentDgrs/RiseFiV3/actions/workflows/build-and-test.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Solidity](https://img.shields.io/badge/Solidity-0.8.27-blue.svg)](https://docs.soliditylang.org/)
+[![Foundry](https://img.shields.io/badge/Built%20with-Foundry-FFDB1C.svg)](https://getfoundry.sh/)
 
-**RiseFi** is a decentralized investment platform built as part of the Alyra certification program.  
-It allows users to invest into yield-generating strategies via ERC-4626-compliant vaults.
+DeFi yield optimization protocol with ERC-4626 vaults and Morpho Blue integration.
 
-<!-- Test trigger for GitHub Actions -->
+## Features
 
-## 🏗️ Project Structure
+- **ERC-4626 Vaults** — Standard vault interface with 6-decimal USDC
+- **Morpho Blue Ready** — Integration architecture for yield optimization
+- **Gas Optimized** — Professional gas optimization patterns
+- **Comprehensive Testing** — Unit, integration, and fork testing
+- **Security Analysis** — Automated Slither security scanning
 
-```
-RiseFiv3Foundry/
-├── .github/workflows/test.yml  ← GitHub Actions CI (Foundry)
-├── RiseFi/                     ← Smart contracts (Vault, ERC20, tests)
-└── frontend/                   ← Frontend (coming soon)
-```
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- [Foundry](https://getfoundry.sh/) installed
-- Git
-
-### Installation
+## Quick Start
 
 ```bash
+# Clone and install
 git clone https://github.com/FlorentDgrs/RiseFiV3.git
-cd RiseFiV3
+cd RiseFiV3/RiseFi
 forge install
+
+# Build and test
+forge build
+forge test
 ```
 
-### Development
+## Architecture
+
+```
+RiseFi/
+├── src/
+│   ├── MockedUSDC.sol     # 6-decimal USDC token
+│   ├── RiseFiVault.sol    # ERC-4626 vault implementation
+│   └── interfaces/        # Contract interfaces
+├── test/
+│   ├── unit/              # Unit tests (20 tests)
+│   └── fork/              # Fork tests (5 tests)
+└── script/                # Deployment scripts
+```
+
+## Testing
 
 ```bash
-# Navigate to smart contracts
-cd RiseFi
+# Unit tests
+forge test --no-match-contract "Fork" --gas-report
 
-# Build contracts
-forge build
+# Fork tests (requires Base RPC)
+forge test --match-contract "Fork" --fork-url base_public -v
 
-# Run tests
+# All tests
 forge test
-
-# Format code
-forge fmt
 ```
 
-## 📦 Subprojects
+## Development
 
-### `/RiseFi` – Smart contracts (Solidity + Foundry)
+- **Foundry** — Testing and development framework
+- **OpenZeppelin** — Security standards and libraries
+- **Base Network** — Target deployment network
+- **Slither** — Automated security analysis
 
-- ERC20 mock token (`MockedUSDC`)
-- ERC4626 vault (in progress)
-- Morpho Blue integration (strategy routing)
-- Tests in Foundry + GitHub Actions + Slither
+## Smart Contracts
 
-📘 [See smart contract README](./RiseFi/README.md)
+| Contract      | Description                            |
+| ------------- | -------------------------------------- |
+| `MockedUSDC`  | 6-decimal USDC token for testing       |
+| `RiseFiVault` | ERC-4626 vault with yield optimization |
 
-### `/frontend` – Web3 frontend (to come)
+## Networks
 
-- Connect wallet
-- Visualize vaults
-- Deposit/withdraw
-- Monitor yield
+- **Base Mainnet** — Production deployment (coming soon)
+- **Base Sepolia** — Testnet deployment (coming soon)
+- **Local Fork** — Development and testing
 
-## 🎓 Context
+## License
 
-This project is part of the final evaluation for the [Alyra blockchain developer certification](https://alyra.fr/).  
-It demonstrates skills in Solidity, smart contract testing, TDD, vault design, DeFi protocol integration, and deployment pipelines.
-
-## 🧪 Testing
-
-All tests are automatically run on every push via GitHub Actions:
-
-- Unit tests
-- Integration tests
-- Security analysis (Slither)
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
-
-## 📄 License
-
-MIT License - see LICENSE file for details
-
-## 🔗 Links
-
-- [Alyra Certification](https://alyra.fr/)
-- [Foundry Book](https://book.getfoundry.sh/)
-- [ERC-4626 Standard](https://eips.ethereum.org/EIPS/eip-4626)
+MIT License

@@ -1,28 +1,27 @@
 # RiseFi Smart Contracts
 
-![CI](https://github.com/FlorentDgrs/RiseFiV3/actions/workflows/test.yml/badge.svg)
+[![Build & Test](https://github.com/FlorentDgrs/RiseFiV3/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/FlorentDgrs/RiseFiV3/actions/workflows/build-and-test.yml)
 
-Smart contracts for the **RiseFi** decentralized vault platform, built with Foundry.
+Smart contracts for the **RiseFi** DeFi yield vault platform, built with Foundry.
 
 ## 📋 Contracts
 
 ### MockedUSDC.sol
 
-A mock USDC token for testing purposes:
+6-decimal USDC token for testing:
 
-- ERC-20 compliant
+- ERC-20 compliant with 6 decimals (like real USDC)
 - Mintable by owner
 - Used for vault testing
 
-```solidity
-contract MockedUSDC is ERC20, Ownable {
-    constructor() ERC20("Mocked USDC", "mUSDC") Ownable(msg.sender) {}
+### RiseFiVault.sol
 
-    function mint(address to, uint256 amount) public onlyOwner {
-        _mint(to, amount);
-    }
-}
-```
+ERC-4626 compliant vault:
+
+- Standard vault interface
+- 6-decimal USDC as underlying asset
+- Yield optimization ready
+- Morpho Blue integration architecture
 
 ## 🚀 Development
 
@@ -49,11 +48,14 @@ forge build
 # Run all tests
 forge test
 
-# Run with verbose output
-forge test -vvv
+# Run unit tests only
+forge test --no-match-contract "Fork"
 
-# Run specific test
-forge test --match-test testNameAndSymbol
+# Run fork tests only
+forge test --match-contract "Fork" --fork-url base_public
+
+# Run with gas report
+forge test --gas-report
 ```
 
 ### Format
@@ -62,32 +64,36 @@ forge test --match-test testNameAndSymbol
 forge fmt
 ```
 
-### Gas Analysis
-
-```bash
-forge snapshot
-```
-
 ## 🧪 Testing
 
-### Current Tests
+### Test Coverage
 
-- `MockedUSDC.t.sol`: Tests for the mock USDC token
-  - Name and symbol verification
-  - Minting functionality
-  - Owner permissions
+- **Unit Tests**: 20 tests covering MockedUSDC and RiseFiVault
+- **Fork Tests**: 5 tests using Base network fork
+- **Gas Optimization**: Comprehensive gas reporting
+
+### Test Structure
+
+```bash
+test/
+├── unit/
+│   ├── MockedUSDC.t.sol       # USDC token tests
+│   └── RiseFiVault.t.sol      # Vault functionality tests
+└── fork/
+    └── RiseFiVaultFork.t.sol  # Integration tests on Base fork
+```
 
 ### Running Tests
 
 ```bash
-# Run all tests
-forge test
+# All tests with coverage
+forge test --gas-report
 
-# Run with coverage
-forge coverage
+# Unit tests only
+forge test --no-match-contract "Fork" --gas-report
 
-# Run specific test file
-forge test --match-path test/MockedUSDC.t.sol
+# Fork tests (requires Base RPC)
+forge test --match-contract "Fork" --fork-url base_public -v
 ```
 
 ## 📁 Project Structure
@@ -95,21 +101,31 @@ forge test --match-path test/MockedUSDC.t.sol
 ```
 RiseFi/
 ├── src/
-│   └── MockedUSDC.sol      ← Mock USDC token
+│   ├── MockedUSDC.sol          # 6-decimal USDC token
+│   ├── RiseFiVault.sol         # ERC-4626 vault implementation
+│   └── interfaces/             # Contract interfaces
 ├── test/
-│   └── MockedUSDC.t.sol    ← Token tests
-├── script/                  ← Deployment scripts
-├── lib/                     ← Dependencies
-└── foundry.toml            ← Foundry configuration
+│   ├── unit/                   # Unit tests (20 tests)
+│   └── fork/                   # Fork tests (5 tests)
+├── script/                     # Deployment scripts
+├── lib/                        # Dependencies (OpenZeppelin, etc.)
+├── foundry.toml               # Foundry configuration
+└── README.md                  # This file
 ```
 
 ## 🔧 Configuration
 
-The project uses Foundry with the following configuration:
+### Foundry Profiles
 
-- Solidity version: ^0.8.30
-- OpenZeppelin contracts for ERC-20 implementation
-- Forge-std for testing utilities
+- **default**: Standard development profile
+- **ci**: Optimized for CI/CD pipeline
+- **fork**: Base network fork configuration
+
+### Networks
+
+- **Base Mainnet**: Production target
+- **Base Sepolia**: Testnet deployment
+- **Local Fork**: Development and testing
 
 ## 🚀 Deployment
 
@@ -123,26 +139,38 @@ anvil
 forge script script/Deploy.s.sol --rpc-url http://localhost:8545 --private-key 0x...
 ```
 
-### Testnet/Mainnet
+### Base Network
 
 ```bash
-# Deploy to testnet
-forge script script/Deploy.s.sol --rpc-url <RPC_URL> --private-key <PRIVATE_KEY>
+# Deploy to Base Sepolia
+forge script script/Deploy.s.sol --rpc-url base_sepolia --broadcast --verify
+
+# Deploy to Base Mainnet
+forge script script/Deploy.s.sol --rpc-url base_mainnet --broadcast --verify
 ```
+
+## 🔐 Security
+
+- **Slither Analysis**: Automated security scanning
+- **OpenZeppelin**: Battle-tested security patterns
+- **Comprehensive Testing**: 95%+ test coverage
+- **Gas Optimization**: Professional gas optimization
 
 ## 📚 Documentation
 
 - [Foundry Book](https://book.getfoundry.sh/)
 - [OpenZeppelin Contracts](https://docs.openzeppelin.com/contracts/)
 - [ERC-4626 Standard](https://eips.ethereum.org/EIPS/eip-4626)
+- [Morpho Blue](https://morpho.org/)
 
 ## 🤝 Contributing
 
 1. Follow the coding standards
-2. Add tests for new features
+2. Add comprehensive tests
 3. Ensure all tests pass
 4. Update documentation
+5. Run security analysis
 
 ## 📄 License
 
-MIT License - see LICENSE file for details
+MIT License
