@@ -33,10 +33,7 @@ contract RiseFiVaultTest is Test {
      * @dev Helper: Complete deposit flow for user
      * @return shares Amount of vault shares received
      */
-    function _depositFor(
-        address account,
-        uint256 amount
-    ) internal returns (uint256 shares) {
+    function _depositFor(address account, uint256 amount) internal returns (uint256 shares) {
         _mintAndApprove(account, amount);
         vm.prank(account);
         shares = vault.deposit(amount, account);
@@ -76,11 +73,7 @@ contract RiseFiVaultTest is Test {
         // Assertions
         assertEq(shares, AMOUNT, "Should receive 1:1 shares initially");
         assertEq(vault.balanceOf(user), AMOUNT, "User should have shares");
-        assertEq(
-            USDC.balanceOf(address(vault)),
-            AMOUNT,
-            "Vault should have USDC"
-        );
+        assertEq(USDC.balanceOf(address(vault)), AMOUNT, "Vault should have USDC");
         assertEq(USDC.balanceOf(user), 0, "User should have no USDC left");
         assertEq(vault.totalAssets(), AMOUNT, "Total assets should match");
     }
@@ -109,11 +102,7 @@ contract RiseFiVaultTest is Test {
         assertEq(assetsReceived, AMOUNT, "Should receive exact USDC amount");
         assertEq(vault.balanceOf(user), 0, "User should have no shares");
         assertEq(USDC.balanceOf(address(vault)), 0, "Vault should be empty");
-        assertEq(
-            USDC.balanceOf(user),
-            AMOUNT,
-            "User should have original USDC"
-        );
+        assertEq(USDC.balanceOf(user), AMOUNT, "User should have original USDC");
         assertEq(vault.totalAssets(), 0, "Total assets should be zero");
     }
 
@@ -127,21 +116,9 @@ contract RiseFiVaultTest is Test {
         vault.withdraw(withdrawAmount, user, user);
 
         // THEN: User should have half shares and half USDC
-        assertEq(
-            vault.balanceOf(user),
-            AMOUNT / 2,
-            "User should have half shares"
-        );
-        assertEq(
-            USDC.balanceOf(user),
-            withdrawAmount,
-            "User should have half USDC"
-        );
-        assertEq(
-            vault.totalAssets(),
-            AMOUNT / 2,
-            "Vault should have half assets"
-        );
+        assertEq(vault.balanceOf(user), AMOUNT / 2, "User should have half shares");
+        assertEq(USDC.balanceOf(user), withdrawAmount, "User should have half USDC");
+        assertEq(vault.totalAssets(), AMOUNT / 2, "Vault should have half assets");
     }
 
     // ========== INTEGRATION TESTS ==========
@@ -158,11 +135,7 @@ contract RiseFiVaultTest is Test {
         vault.withdraw(AMOUNT, user, user);
 
         // Back to initial state
-        assertEq(
-            USDC.balanceOf(user),
-            AMOUNT,
-            "User should have original USDC back"
-        );
+        assertEq(USDC.balanceOf(user), AMOUNT, "User should have original USDC back");
         assertEq(vault.balanceOf(user), 0, "User should have no shares");
         assertEq(vault.totalAssets(), 0, "Vault should be empty");
     }

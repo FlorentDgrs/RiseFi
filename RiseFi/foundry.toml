@@ -2,5 +2,48 @@
 src = "src"
 out = "out"
 libs = ["lib"]
+solc_version = "0.8.27"
 
-# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+# Test configuration
+[profile.default.fuzz]
+runs = 256
+
+[profile.default.invariant]
+runs = 256
+depth = 15
+
+# Fork configuration
+[rpc_endpoints]
+base_public = "https://mainnet.base.org"           # Pour GitHub Actions
+base_private = "${ALCHEMY_BASE_RPC_URL}"           # Pour votre dev local
+sepolia = "${ALCHEMY_BASE_SEPOLIA_URL}"             # Pour déploiements test
+
+# Base fork configuration for real yield testing
+[profile.fork]
+fork_url = "${ALCHEMY_BASE_RPC_URL}"
+fork_block_number = 32734322  # Current block (July 2025)
+verbosity = 2
+
+# Profile for current yields (most recent)
+[profile.current]
+fork_url = "${ALCHEMY_BASE_RPC_URL}"
+fork_block_number = 32734322  # Current block
+verbosity = 2
+
+# Profile for 1 month ago comparison
+[profile.month-ago]
+fork_url = "${ALCHEMY_BASE_RPC_URL}"
+fork_block_number = 31438322  # ~1 month ago
+verbosity = 2
+
+# Profile for 3 months ago comparison
+[profile.3months-ago]
+fork_url = "${ALCHEMY_BASE_RPC_URL}"
+fork_block_number = 28846322  # ~3 months ago
+verbosity = 2
+
+# Environment variables
+[profile.default.env]
+FOUNDRY_FUZZ_RUNS = "256"
+FOUNDRY_INVARIANT_RUNS = "256"
+

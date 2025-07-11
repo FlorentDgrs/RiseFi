@@ -1,0 +1,63 @@
+# Environment variables - NEVER COMMIT THESE!
+.env
+.env.local
+.env.development
+.env.production
+*.env
+
+# Foundry artifacts
+cache/
+out/
+broadcast/
+deployments/
+
+# Node.js dependencies (if you add a frontend)
+node_modules/
+.npm
+.yarn/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Test artifacts
+coverage/
+lcov.info
+.coverage_contracts/
+.coverage_cache/
+
+# Build artifacts
+dist/
+build/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Private keys - CRITICAL SECURITY
+private_keys/
+*.pem
+*.key
+mnemonic.txt
+
+# Foundry specific
+forge-deploy/
+script/deployed_addresses.json 
