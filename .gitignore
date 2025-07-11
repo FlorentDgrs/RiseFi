@@ -3,3 +3,6 @@ out/
 cache/
 artifacts/
 *.t.sol.json
+
+# Cursor Rules (private, not for commit)
+.cursorrules
