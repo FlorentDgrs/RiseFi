@@ -163,6 +163,8 @@ contract RiseFiVault is ERC4626 {
         return Math.mulDiv(assets, eff, totalAssets(), rounding);
     }
 
+    // ========== WITHDRAWAL LOGIC ==========
+
     /**
      * @notice Override withdrawal: burn RiseFi shares, withdraw from Morpho, transfer USDC
      * @param caller The address calling the withdrawal
@@ -206,5 +208,109 @@ contract RiseFiVault is ERC4626 {
         IERC20(asset()).safeTransfer(receiver, assets);
 
         emit Withdraw(caller, receiver, owner, assets, shares);
+    }
+
+    // ========== MINT/REDEEM OVERRIDES ==========
+
+    /**
+     * @notice Mint shares by depositing assets
+     * @param caller The address calling the mint
+     * @param receiver The address receiving the shares
+     * @param shares The amount of shares to mint
+     * @param assets The amount of assets required
+     * @dev Delegates to _deposit with calculated assets
+     */
+    function _mint(address caller, address receiver, uint256 shares, uint256 assets) internal {
+        _deposit(caller, receiver, assets, shares);
+    }
+
+    /**
+     * @notice Redeem shares by withdrawing assets
+     * @param caller The address calling the redeem
+     * @param receiver The address receiving the assets
+     * @param owner The address owning the shares
+     * @param shares The amount of shares to redeem
+     * @param assets The amount of assets to receive
+     * @dev Delegates to _withdraw with calculated assets
+     */
+    function _redeem(address caller, address receiver, address owner, uint256 shares, uint256 assets) internal {
+        _withdraw(caller, receiver, owner, assets, shares);
+    }
+
+    // ========== PREVIEW FUNCTIONS ==========
+
+    /**
+     * @notice Preview the amount of shares that would be minted for a given deposit
+     * @param assets The amount of assets to deposit
+     * @return The amount of shares that would be minted
+     */
+    function previewDeposit(uint256 assets) public view override returns (uint256) {
+        return convertToShares(assets);
+    }
+
+    /**
+     * @notice Preview the amount of shares that would be burned for a given withdrawal
+     * @param assets The amount of assets to withdraw
+     * @return The amount of shares that would be burned
+     */
+    function previewWithdraw(uint256 assets) public view override returns (uint256) {
+        return convertToShares(assets);
+    }
+
+    /**
+     * @notice Preview the amount of assets required to mint a given amount of shares
+     * @param shares The amount of shares to mint
+     * @return The amount of assets required
+     */
+    function previewMint(uint256 shares) public view override returns (uint256) {
+        uint256 eff = _effectiveSupply();
+        if (eff == 0) return shares; // First deposit
+        return Math.mulDiv(shares, totalAssets(), eff, Math.Rounding.Ceil);
+    }
+
+    /**
+     * @notice Preview the amount of assets that would be received for a given share redemption
+     * @param shares The amount of shares to redeem
+     * @return The amount of assets that would be received
+     */
+    function previewRedeem(uint256 shares) public view override returns (uint256) {
+        return convertToAssets(shares);
+    }
+
+    // ========== MAX FUNCTIONS ==========
+
+    /**
+     * @notice Get the maximum amount of assets that can be deposited
+     * @return The maximum deposit amount
+     */
+    function maxDeposit(address) public pure override returns (uint256) {
+        return type(uint256).max;
+    }
+
+    /**
+     * @notice Get the maximum amount of shares that can be minted
+     * @return The maximum mint amount
+     */
+    function maxMint(address) public pure override returns (uint256) {
+        return type(uint256).max;
+    }
+
+    /**
+     * @notice Get the maximum amount of assets that can be withdrawn by the owner
+     * @param owner The address owning the shares
+     * @return The maximum withdrawal amount
+     */
+    function maxWithdraw(address owner) public view override returns (uint256) {
+        uint256 shares = balanceOf(owner);
+        return convertToAssets(shares);
+    }
+
+    /**
+     * @notice Get the maximum amount of shares that can be redeemed by the owner
+     * @param owner The address owning the shares
+     * @return The maximum redemption amount
+     */
+    function maxRedeem(address owner) public view override returns (uint256) {
+        return balanceOf(owner);
     }
 }

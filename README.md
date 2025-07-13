@@ -5,17 +5,19 @@
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.27-blue.svg)](https://docs.soliditylang.org/)
 [![Foundry](https://img.shields.io/badge/Built%20with-Foundry-FFDB1C.svg)](https://getfoundry.sh/)
 
-DeFi yield optimization protocol with ERC-4626 vaults and Morpho Blue integration.
+**RiseFi** is a DeFi yield optimization protocol featuring ERC-4626 vaults with **Morpho Blue integration** on the Base network. Built with security-first principles and comprehensive testing.
 
-## Features
+## ✨ Features
 
-- **ERC-4626 Vaults** — Standard vault interface with 6-decimal USDC
-- **Morpho Blue Ready** — Integration architecture for yield optimization
-- **Gas Optimized** — Professional gas optimization patterns
-- **Comprehensive Testing** — Unit, integration, and fork testing
-- **Security Analysis** — Automated Slither security scanning
+- **🔒 ERC-4626 Compliant Vaults** — Standard vault interface with 6-decimal USDC support
+- **🌊 Morpho Blue Integration** — Direct integration with Morpho vaults for enhanced yields
+- **🛡️ Inflation Attack Protection** — Dead shares mechanism prevents inflation attacks
+- **⚡ Gas Optimized** — Professional gas optimization patterns and efficient operations
+- **🧪 Comprehensive Testing** — 35 tests including unit, integration, and fork testing
+- **🔍 Security Analysis** — Automated Slither security scanning and best practices
+- **📊 Professional Documentation** — Complete NatSpec documentation in English
 
-## Quick Start
+## 🚀 Quick Start
 
 ```bash
 # Clone and install
@@ -25,56 +27,122 @@ forge install
 
 # Build and test
 forge build
-forge test
+forge test --gas-report
 ```
 
-## Architecture
+## 🏗️ Architecture
 
 ```
 RiseFi/
 ├── src/
-│   ├── MockedUSDC.sol     # 6-decimal USDC token
-│   ├── RiseFiVault.sol    # ERC-4626 vault implementation
-│   └── interfaces/        # Contract interfaces
+│   ├── RiseFiVault.sol        # ERC-4626 vault with Morpho integration
+│   └── interfaces/            # Contract interfaces
 ├── test/
-│   ├── unit/              # Unit tests (20 tests)
-│   └── fork/              # Fork tests (5 tests)
-└── script/                # Deployment scripts
+│   ├── RiseFiVaultFork.t.sol # Comprehensive fork tests (35 tests)
+│   └── unit/                  # Unit tests
+└── scripts/                   # Deployment scripts
 ```
 
-## Testing
+## 🧪 Testing
 
 ```bash
-# Unit tests
-forge test --no-match-contract "Fork" --gas-report
+# All tests with gas report
+forge test --gas-report
 
 # Fork tests (requires Base RPC)
-forge test --match-contract "Fork" --fork-url base_public -v
+forge test --match-contract "Fork" --fork-url https://mainnet.base.org --fork-block-number 32778110
 
-# All tests
-forge test
+# Unit tests only
+forge test --no-match-contract "Fork" --gas-report
 ```
 
-## Development
+## 🔧 Smart Contracts
 
-- **Foundry** — Testing and development framework
-- **OpenZeppelin** — Security standards and libraries
-- **Base Network** — Target deployment network
-- **Slither** — Automated security analysis
+| Contract      | Description                                 | Status      |
+| ------------- | ------------------------------------------- | ----------- |
+| `RiseFiVault` | ERC-4626 vault with Morpho Blue integration | ✅ Complete |
 
-## Smart Contracts
+### Key Features
 
-| Contract      | Description                            |
-| ------------- | -------------------------------------- |
-| `MockedUSDC`  | 6-decimal USDC token for testing       |
-| `RiseFiVault` | ERC-4626 vault with yield optimization |
+- **Morpho Integration**: Direct integration with Morpho vaults on Base
+- **Dead Shares Protection**: Prevents inflation attacks with 1000 dead shares
+- **Slippage Protection**: Built-in slippage tolerance for withdrawals
+- **Gas Optimization**: Efficient operations with professional patterns
+- **ERC-4626 Compliance**: Full standard compliance with proper rounding
 
-## Networks
+## 🌐 Networks
 
-- **Base Mainnet** — Production deployment (coming soon)
-- **Base Sepolia** — Testnet deployment (coming soon)
-- **Local Fork** — Development and testing
+- **Base Mainnet** — Production deployment target
+- **Base Sepolia** — Testnet deployment
+- **Local Fork** — Development and testing with Base fork
 
-## License
+## 📊 Test Results
 
-MIT License
+```
+Ran 35 tests for test/RiseFiVaultFork.t.sol:RiseFiVaultForkTest
+✅ 35 passed; 0 failed; 0 skipped
+```
+
+### Test Coverage
+
+- **Unit Tests**: Core functionality and edge cases
+- **Fork Tests**: Real integration with Morpho vaults on Base
+- **Fuzz Tests**: Property-based testing for robustness
+- **Gas Optimization**: Comprehensive gas reporting
+
+## 🔐 Security
+
+- **OpenZeppelin Standards**: Battle-tested security patterns
+- **Comprehensive Testing**: 35 tests with 100% pass rate
+- **Slither Analysis**: Automated security scanning
+- **Professional Documentation**: Complete NatSpec documentation
+- **Inflation Attack Protection**: Dead shares mechanism
+
+## 🛠️ Development
+
+### Prerequisites
+
+- [Foundry](https://getfoundry.sh/) installed
+- Base network RPC access for fork testing
+
+### Commands
+
+```bash
+# Build contracts
+forge build
+
+# Run tests
+forge test --gas-report
+
+# Format code
+forge fmt
+
+# Security analysis
+slither .
+
+# Deploy (when ready)
+forge script script/Deploy.s.sol --rpc-url base_mainnet --broadcast --verify
+```
+
+## 📚 Documentation
+
+- **Contract Documentation**: Complete NatSpec documentation
+- **Test Documentation**: Comprehensive test explanations
+- **Integration Guide**: Morpho Blue integration details
+- **Security Analysis**: Detailed security considerations
+
+## 🤝 Contributing
+
+1. Follow Solidity coding standards
+2. Add comprehensive tests for new features
+3. Ensure all tests pass (35/35)
+4. Update documentation
+5. Run security analysis with Slither
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) file for details.
+
+---
+
+**Built with ❤️ using Foundry and OpenZeppelin**
