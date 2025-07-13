@@ -18,11 +18,14 @@ contract RiseFiVaultYieldTest is Test {
     RiseFiVault public vault;
 
     // ========== BASE MAINNET ADDRESSES ==========
-    IERC20Metadata public constant USDC = IERC20Metadata(0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913);
-    address public constant MORPHO_VAULT_ADDRESS = 0x3128a0F7f0ea68E7B7c9B00AFa7E41045828e858;
+    IERC20Metadata public constant USDC =
+        IERC20Metadata(0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913);
+    address public constant MORPHO_VAULT_ADDRESS =
+        0x3128a0F7f0ea68E7B7c9B00AFa7E41045828e858;
 
     // ========== WHALE ADDRESSES ==========
-    address public constant USDC_WHALE = 0x0B0A5886664376F59C351ba3f598C8A8B4D0A6f3;
+    address public constant USDC_WHALE =
+        0x0B0A5886664376F59C351ba3f598C8A8B4D0A6f3;
 
     // ========== TEST ADDRESSES ==========
     address public user = address(0x1234);
@@ -36,6 +39,11 @@ contract RiseFiVaultYieldTest is Test {
     uint256 public constant YEAR = 365 * DAY;
 
     function setUp() public {
+        // Create/select fork if not already on one
+        if (vm.activeFork() == 0) {
+            vm.createSelectFork("https://mainnet.base.org", 32_778_110);
+        }
+
         vault = new RiseFiVault(IERC20(address(USDC)), MORPHO_VAULT_ADDRESS);
 
         // Verify we're on the right network
@@ -62,7 +70,11 @@ contract RiseFiVaultYieldTest is Test {
      * @param num Numerator
      * @param denom Denominator
      */
-    function logPct(string memory label, uint256 num, uint256 denom) internal pure {
+    function logPct(
+        string memory label,
+        uint256 num,
+        uint256 denom
+    ) internal pure {
         uint256 basisPoints = pct(num, denom);
         uint256 whole = basisPoints / 100;
         uint256 decimal = basisPoints % 100;
@@ -108,7 +120,10 @@ contract RiseFiVaultYieldTest is Test {
      * @param amount The amount to deposit
      * @return shares The shares received from deposit
      */
-    function _depositFor(address account, uint256 amount) internal returns (uint256 shares) {
+    function _depositFor(
+        address account,
+        uint256 amount
+    ) internal returns (uint256 shares) {
         _fundWithUSDC(account, amount);
         vm.startPrank(account);
         USDC.approve(address(vault), amount);
@@ -123,15 +138,17 @@ contract RiseFiVaultYieldTest is Test {
      * @param timeElapsed Time elapsed in seconds
      * @return apy Annual percentage yield (scaled by 1e18)
      */
-    function _calculateAPY(uint256 initialAssets, uint256 finalAssets, uint256 timeElapsed)
-        internal
-        pure
-        returns (uint256)
-    {
+    function _calculateAPY(
+        uint256 initialAssets,
+        uint256 finalAssets,
+        uint256 timeElapsed
+    ) internal pure returns (uint256) {
         if (timeElapsed == 0 || initialAssets == 0) return 0;
 
         // Calculate growth rate: (final - initial) / initial
-        uint256 growth = finalAssets > initialAssets ? finalAssets - initialAssets : 0;
+        uint256 growth = finalAssets > initialAssets
+            ? finalAssets - initialAssets
+            : 0;
         uint256 growthRate = (growth * 1e18) / initialAssets;
 
         // Convert to annual rate: growth_rate * (365 days / time_elapsed)
@@ -181,7 +198,10 @@ contract RiseFiVaultYieldTest is Test {
         console.log("Initial Shares:", initialShares);
         console.log("Initial Assets:", initialAssets);
         console.log("Share Price:", (initialAssets * 1e18) / initialShares);
-        console.log("Morpho Vault Shares:", vault.morphoVault().balanceOf(address(vault)));
+        console.log(
+            "Morpho Vault Shares:",
+            vault.morphoVault().balanceOf(address(vault))
+        );
 
         // Simulate 1 day of yield
         _simulateYield(DAY);
@@ -193,10 +213,15 @@ contract RiseFiVaultYieldTest is Test {
         console.log("Shares:", sharesAfter1Day);
         console.log("Assets:", assetsAfter1Day);
         console.log("Share Price:", (assetsAfter1Day * 1e18) / sharesAfter1Day);
-        console.log("Morpho Vault Shares:", vault.morphoVault().balanceOf(address(vault)));
+        console.log(
+            "Morpho Vault Shares:",
+            vault.morphoVault().balanceOf(address(vault))
+        );
 
         // Calculate yield based on asset value change
-        uint256 yield = assetsAfter1Day > initialAssets ? assetsAfter1Day - initialAssets : 0;
+        uint256 yield = assetsAfter1Day > initialAssets
+            ? assetsAfter1Day - initialAssets
+            : 0;
         uint256 apy = _calculateAPY(initialAssets, assetsAfter1Day, DAY);
 
         console.log("Yield:", yield);
@@ -227,7 +252,9 @@ contract RiseFiVaultYieldTest is Test {
 
         // Check final states
         uint256 user1FinalAssets = vault.convertToAssets(vault.balanceOf(user));
-        uint256 user2FinalAssets = vault.convertToAssets(vault.balanceOf(user2));
+        uint256 user2FinalAssets = vault.convertToAssets(
+            vault.balanceOf(user2)
+        );
 
         console.log("=== Multiple Users Yield (Real) ===");
         console.log("User1 Initial:", user1InitialAssets);
@@ -239,13 +266,25 @@ contract RiseFiVaultYieldTest is Test {
         console.log("User2 Yield:", user2FinalAssets - user2InitialAssets);
 
         // Both users should have earned yield
-        assertGe(user1FinalAssets, user1InitialAssets, "User1 should earn yield");
-        assertGe(user2FinalAssets, user2InitialAssets, "User2 should earn yield");
+        assertGe(
+            user1FinalAssets,
+            user1InitialAssets,
+            "User1 should earn yield"
+        );
+        assertGe(
+            user2FinalAssets,
+            user2InitialAssets,
+            "User2 should earn yield"
+        );
 
         // User1 should earn more yield (deposited earlier)
         uint256 user1Yield = user1FinalAssets - user1InitialAssets;
         uint256 user2Yield = user2FinalAssets - user2InitialAssets;
-        assertGe(user1Yield, user2Yield, "User1 should earn more yield (earlier deposit)");
+        assertGe(
+            user1Yield,
+            user2Yield,
+            "User1 should earn more yield (earlier deposit)"
+        );
     }
 
     function test_Yield_WithdrawalTimingReal() public {
@@ -340,12 +379,18 @@ contract RiseFiVaultYieldTest is Test {
 
             uint256 currentShares = vault.balanceOf(user);
             uint256 currentAssets = vault.convertToAssets(currentShares);
-            uint256 currentSharePrice = currentShares > 0 ? (currentAssets * 1e18) / currentShares : 0;
+            uint256 currentSharePrice = currentShares > 0
+                ? (currentAssets * 1e18) / currentShares
+                : 0;
 
             console.log("Day", i, "Share Price:", currentSharePrice);
 
             // Share price should be non-decreasing (yield accumulation)
-            assertGe(currentSharePrice, initialSharePrice, "Share price should not decrease");
+            assertGe(
+                currentSharePrice,
+                initialSharePrice,
+                "Share price should not decrease"
+            );
         }
     }
 
@@ -373,10 +418,26 @@ contract RiseFiVaultYieldTest is Test {
         // Conversions should be consistent (within rounding tolerance)
         // Note: Tolerance may need adjustment based on fork block age and yield accumulation
         uint256 tolerance = 5; // 5 wei tolerance for rounding (accounts for older forks and cumulative rounding)
-        assertGe(currentShares, sharesFromAssets - tolerance, "Share conversion should be accurate");
-        assertLe(currentShares, sharesFromAssets + tolerance, "Share conversion should be accurate");
-        assertGe(currentAssets, assetsFromShares - tolerance, "Asset conversion should be accurate");
-        assertLe(currentAssets, assetsFromShares + tolerance, "Asset conversion should be accurate");
+        assertGe(
+            currentShares,
+            sharesFromAssets - tolerance,
+            "Share conversion should be accurate"
+        );
+        assertLe(
+            currentShares,
+            sharesFromAssets + tolerance,
+            "Share conversion should be accurate"
+        );
+        assertGe(
+            currentAssets,
+            assetsFromShares - tolerance,
+            "Asset conversion should be accurate"
+        );
+        assertLe(
+            currentAssets,
+            assetsFromShares + tolerance,
+            "Asset conversion should be accurate"
+        );
     }
 
     function test_Yield_RealWorldScenario() public {
