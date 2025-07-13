@@ -39,10 +39,11 @@ contract RiseFiVaultYieldTest is Test {
     uint256 public constant YEAR = 365 * DAY;
 
     function setUp() public {
-        // Create/select fork if not already on one
-        if (vm.activeFork() == 0) {
-            vm.createSelectFork("https://mainnet.base.org", 32_778_110);
-        }
+        // Create (or select) Base mainnet fork at desired block
+        vm.createSelectFork(
+            vm.rpcUrl("base_public"), // defined in foundry.toml
+            32_778_110 // block
+        );
 
         vault = new RiseFiVault(IERC20(address(USDC)), MORPHO_VAULT_ADDRESS);
 

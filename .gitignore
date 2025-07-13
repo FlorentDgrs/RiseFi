@@ -6,3 +6,6 @@ artifacts/
 
 # Cursor Rules (private, not for commit)
 .cursorrules
+
+# Development files (private, not for commit)
+TODO.md
