@@ -1,4 +1,10 @@
-name: Build & Test
+# Correction du workflow CI pour fiabilité fork public
+# 1. Suppression de FOUNDRY_PROFILE global
+# 2. Foundry stable
+# 3. Cache compilateur + dépendances
+# 4. Fork explicite + robustesse RPC dans les jobs forkés
+
+name: RiseFi CI - Base Integration & Yield Validation
 
 on:
   push:
@@ -6,12 +12,9 @@ on:
   pull_request:
     branches: [main]
 
-env:
-  FOUNDRY_PROFILE: ci
-
 jobs:
-  lint:
-    name: Code Quality
+  code-quality:
+    name: Code Quality & Build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -22,10 +25,22 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Cache Foundry compiler
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/.foundry
+          key: ${{ runner.os }}-foundry-${{ hashFiles('**/foundry.toml') }}
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: RiseFi/lib
+          key: ${{ runner.os }}-forge-deps-${{ hashFiles('**/foundry.toml') }}
+
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          version: stable
 
       - name: Install dependencies
         run: forge install
@@ -36,8 +51,8 @@ jobs:
       - name: Build contracts
         run: forge build --sizes
 
-  test:
-    name: Unit Tests
+  unit-tests:
+    name: Unit Tests (No Fork)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -48,19 +63,31 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Cache Foundry compiler
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/.foundry
+          key: ${{ runner.os }}-foundry-${{ hashFiles('**/foundry.toml') }}
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: RiseFi/lib
+          key: ${{ runner.os }}-forge-deps-${{ hashFiles('**/foundry.toml') }}
+
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          version: stable
 
       - name: Install dependencies
         run: forge install
 
       - name: Run unit tests
-        run: forge test --no-match-contract "Fork" --gas-report
+        run: forge test --no-match-contract "Fork" --no-match-contract "Yield" --gas-report
 
-  integration-test:
-    name: Integration Tests
+  base-integration:
+    name: Base Integration Tests (Fork + Whale + Vault)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -71,18 +98,77 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Cache Foundry compiler
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/.foundry
+          key: ${{ runner.os }}-foundry-${{ hashFiles('**/foundry.toml') }}
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: RiseFi/lib
+          key: ${{ runner.os }}-forge-deps-${{ hashFiles('**/foundry.toml') }}
+
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          version: stable
 
       - name: Install dependencies
         run: forge install
 
-      - name: Run fork tests
-        run: forge test --match-contract "Fork" --fork-url base_public -v
-      - name: Run yield tests
-        run: forge test --match-contract "RiseFiVaultYieldTest" --fork-url base_public -v
+      - name: Run Base fork tests
+        run: |
+          echo "=== Testing Base Mainnet Integration ==="
+          forge test \
+            --match-contract "Fork" \
+            --fork-url https://mainnet.base.org \
+            --fork-block-number 32778110 \
+            --fork-timeout 60 \
+            --gas-report
+
+  yield-validation:
+    name: Yield Validation (Time Machine Tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: RiseFi
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Cache Foundry compiler
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/.foundry
+          key: ${{ runner.os }}-foundry-${{ hashFiles('**/foundry.toml') }}
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: RiseFi/lib
+          key: ${{ runner.os }}-forge-deps-${{ hashFiles('**/foundry.toml') }}
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Install dependencies
+        run: forge install
+
+      - name: Run yield validation tests
+        run: |
+          echo "=== Testing Yield Generation Over Time ==="
+          forge test \
+            --match-contract "RiseFiVaultYieldTest" \
+            --fork-url https://mainnet.base.org \
+            --fork-block-number 32778110 \
+            --fork-timeout 60 \
+            --gas-report
 
   security:
     name: Security Analysis
@@ -96,15 +182,27 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Cache Foundry compiler
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/.foundry
+          key: ${{ runner.os }}-foundry-${{ hashFiles('**/foundry.toml') }}
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: RiseFi/lib
+          key: ${{ runner.os }}-forge-deps-${{ hashFiles('**/foundry.toml') }}
+
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          version: stable
 
       - name: Install dependencies
         run: forge install
 
-      - name: Run Slither
+      - name: Run Slither security analysis
         uses: crytic/slither-action@v0.3.0
         with:
           target: "RiseFi/"

@@ -29,6 +29,12 @@ contract RiseFiVaultForkTest is Test {
     uint256 public constant AMOUNT = 1000 * 10 ** 6; // 1000 USDC
 
     function setUp() public {
+        // Create (or select) Base mainnet fork at desired block
+        vm.createSelectFork(
+            vm.rpcUrl("base_public"), // defined in foundry.toml
+            32_778_110 // block
+        );
+
         vault = new RiseFiVault(IERC20(address(USDC)), MORPHO_VAULT_ADDRESS);
 
         // Verify we're on the right network
