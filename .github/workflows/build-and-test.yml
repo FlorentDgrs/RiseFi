@@ -12,6 +12,9 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  FOUNDRY_DISABLE_NIGHTLY_WARNING: true
+
 jobs:
   code-quality:
     name: Code Quality & Build
@@ -84,9 +87,10 @@ jobs:
         run: forge install
 
       - name: Run unit tests
-        run: forge test \
-          --no-match-contract "(Fork|Yield)" \
-          --gas-report
+        run: |
+          forge test \
+            --no-match-contract '(Fork|Yield)' \
+            --gas-report
 
   base-integration:
     name: Base Integration Tests (Fork + Whale + Vault)
@@ -121,10 +125,12 @@ jobs:
         run: forge install
 
       - name: Run Base fork tests
+        env:
+          FOUNDRY_FUZZ_RUNS: 64
         run: |
           echo "=== Testing Base Mainnet Integration ==="
           forge test \
-            --match-contract "Fork" \
+            --match-contract 'Fork' \
             --fork-url https://mainnet.base.org \
             --fork-block-number 32778110 \
             --fork-retry-backoff 300 \
@@ -163,10 +169,12 @@ jobs:
         run: forge install
 
       - name: Run yield validation tests
+        env:
+          FOUNDRY_FUZZ_RUNS: 64
         run: |
           echo "=== Testing Yield Generation Over Time ==="
           forge test \
-            --match-contract "RiseFiVaultYieldTest" \
+            --match-contract 'RiseFiVaultYieldTest' \
             --fork-url https://mainnet.base.org \
             --fork-block-number 32778110 \
             --fork-retry-backoff 300 \
