@@ -1,6 +1,6 @@
 # Correction du workflow CI pour fiabilité fork public
 # 1. Suppression de FOUNDRY_PROFILE global
-# 2. Foundry stable
+# 2. Foundry nightly (pour --fork-retry-backoff)
 # 3. Cache compilateur + dépendances
 # 4. Fork explicite + robustesse RPC dans les jobs forkés
 
@@ -40,7 +40,7 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: stable
+          version: nightly
 
       - name: Install dependencies
         run: forge install
@@ -78,13 +78,15 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: stable
+          version: nightly
 
       - name: Install dependencies
         run: forge install
 
       - name: Run unit tests
-        run: forge test --no-match-contract "Fork" --no-match-contract "Yield" --gas-report
+        run: forge test \
+          --no-match-contract "(Fork|Yield)" \
+          --gas-report
 
   base-integration:
     name: Base Integration Tests (Fork + Whale + Vault)
@@ -113,7 +115,7 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: stable
+          version: nightly
 
       - name: Install dependencies
         run: forge install
@@ -125,7 +127,7 @@ jobs:
             --match-contract "Fork" \
             --fork-url https://mainnet.base.org \
             --fork-block-number 32778110 \
-            --fork-timeout 60 \
+            --fork-retry-backoff 300 \
             --gas-report
 
   yield-validation:
@@ -155,7 +157,7 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: stable
+          version: nightly
 
       - name: Install dependencies
         run: forge install
@@ -167,7 +169,7 @@ jobs:
             --match-contract "RiseFiVaultYieldTest" \
             --fork-url https://mainnet.base.org \
             --fork-block-number 32778110 \
-            --fork-timeout 60 \
+            --fork-retry-backoff 300 \
             --gas-report
 
   security:
@@ -197,7 +199,7 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: stable
+          version: nightly
 
       - name: Install dependencies
         run: forge install
