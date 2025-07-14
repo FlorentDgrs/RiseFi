@@ -7,13 +7,21 @@ import {
 } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
-import { anvilChain } from "@/utils/chains";
+import { foundry, base } from "viem/chains";
+import { http } from "viem";
 
 const config = getDefaultConfig({
   appName: "RiseFi",
   projectId:
     process.env.NEXT_PUBLIC_WC_PROJECT_ID || "YOUR_WALLETCONNECT_PROJECT_ID",
-  chains: [anvilChain], // Utilise notre configuration Anvil personnalisée
+  chains: [foundry, base],
+  transports: {
+    [foundry.id]: http(
+      process.env.NEXT_PUBLIC_RPC_URL || "http://127.0.0.1:8545"
+    ),
+    [base.id]: http("https://mainnet.base.org"),
+  },
+  ssr: true,
 });
 
 const queryClient = new QueryClient();

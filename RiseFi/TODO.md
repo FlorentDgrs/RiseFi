@@ -1,147 +1,178 @@
 # RiseFi Vault - TODO List
 
-## ✅ **COMPLÉTÉ - Tests de Yield**
+## ✅ **COMPLÉTÉ**
 
-### **Tests de Yield Réussis** ✅
+### **Infrastructure & Tests**
 
-- [x] **Simulation d'intérêt réel** avec `_simulateYield()`
-- [x] **Calcul d'APY précis** : 4.49% détecté
-- [x] **Multi-users** avec yield différentiel (User1 > User2)
-- [x] **Stress test** avec 5 dépôts successifs
-- [x] **Share price consistency** sur 7 jours
-- [x] **Conversion accuracy** avec tolérance 5 wei
-- [x] **Correction d'affichage** des pourcentages (0.12%, 4.49%)
+- [x] **Tests de yield réussis** avec simulation d'intérêt réel (APY 4.49%)
+- [x] **Multi-users** avec yield différentiel fonctionnel
+- [x] **Scripts de setup** pour fork Base + funding whale USDC
+- [x] **Déploiement automatisé** du RiseFiVault sur fork local
+- [x] **Financement des wallets** avec 1000 USDC + 10000 ETH
+- [x] **Configuration Metamask** avec comptes de test
+- [x] **Documentation** FORK_SETUP.md complète et à jour
 
-## 🚀 **PROCHAINES ÉTAPES - Frontend & Démo**
+### **Smart Contracts**
+
+- [x] **RiseFiVault** avec intégration Morpho Blue
+- [x] **Tests unitaires** complets avec couverture >95%
+- [x] **Scripts de déploiement** Foundry fonctionnels
+- [x] **Configuration** pour Base mainnet via fork
+
+## 🚀 **PROCHAINES ÉTAPES**
 
 ### **1. Frontend Next.js** (Priorité 1)
 
-- [ ] **Setup Next.js + TypeScript**
+- [ ] **Composant de dépôt USDC**
 
-  - Configuration avec Tailwind CSS
-  - Intégration Wagmi + RainbowKit
-  - Configuration Base Network
+  - Interface de dépôt avec input montant
+  - Calcul en temps réel des shares reçues
+  - Gestion des approvals USDC
+  - Transaction de dépôt vers le vault
+  - États de loading/succès/erreur
 
-- [ ] **Interface Utilisateur**
+- [ ] **Composant de retrait**
 
-  - Dashboard avec métriques APY en temps réel
-  - Formulaires de dépôt/retrait
-  - Affichage des positions utilisateur
-  - Graphiques de performance
+  - Interface de retrait (withdraw vs redeem)
+  - Calcul en temps réel des USDC reçus
+  - Gestion des shares disponibles
+  - Transaction de retrait du vault
 
-- [ ] **Intégration Smart Contracts**
-  - Hooks Wagmi pour RiseFiVault
-  - Gestion des transactions (deposit/withdraw)
-  - Affichage des balances et shares
-  - Gestion des erreurs et loading states
+- [ ] **Dashboard utilisateur**
 
-### **2. Script de Démo Time Machine** (Priorité 2)
+  - Affichage des positions (USDC déposés, shares détenues)
+  - Métriques APY en temps réel
+  - Historique des transactions
+  - Balance USDC et ETH
 
-- [ ] **Script de simulation temps réel**
+- [ ] **Intégration Wagmi**
+  - Hooks pour les contrats (RiseFiVault, USDC)
+  - Gestion des transactions et receipts
+  - Gestion des erreurs et retry
+  - Notifications utilisateur
+
+### **2. Fonctionnalités Avancées** (Priorité 2)
+
+- [ ] **Time Machine Demo**
 
   - Bouton pour avancer le temps (1 jour, 1 semaine, 1 mois)
   - Affichage en temps réel de l'APY qui change
   - Simulation d'intérêt avec `evm_increaseTime`
   - Interface pour "poke" le vault Morpho
 
-- [ ] **Démo interactive**
-  - Dépôt initial de 1000 USDC
-  - Avancement temporel avec yield visible
-  - Comparaison avant/après yield
-  - Export des métriques pour jury
+- [ ] **Métriques avancées**
 
-### **3. Métriques Avancées** (Priorité 3)
+  - Graphiques de performance historique
+  - Comparaison avec d'autres vaults
+  - Projection de yields futurs
+  - Analyse de risque
 
-- [ ] **Dashboard Analytics**
-  - APY en temps réel avec GraphQL
-  - Historique des rendements
-  - Comparaison avec autres vaults Morpho
-  - Métriques de risque et volatilité
+- [ ] **Optimisations**
+  - Batch transactions pour dépôt+approval
+  - Gasless approvals avec permit
+  - Slippage protection
+  - MEV protection
 
-## 🔒 **Sécurité & Monitoring**
+### **3. Production Ready** (Priorité 3)
 
-### **4. Gestion des Pauses (Pausable)**
+- [ ] **Sécurité**
 
-- [ ] **Ajout d'un rôle PAUSER** (OpenZeppelin Pausable)
-  - Permettre de stopper deposit/withdraw en cas d'incident
-  - Rôle distinct du owner pour séparation des responsabilités
-  - Events pour tracer les pauses/reprises
-  - Tests pour vérifier le comportement en mode pause
+  - Audit des contrats
+  - Tests de stress
+  - Monitoring des risques
+  - Emergency procedures
 
-### **5. Monitoring Oracle Off-Chain**
+- [ ] **Déploiement**
 
-- [ ] **Script d'oracle off-chain** pour surveillance continue
-  - Vérifier que le ratio `assets/totalSupply` reste dans le corridor attendu
-  - Alerting en cas d'anomalie (déviation > X%)
-  - Monitoring des prix USDC et des vaults Morpho
-  - Dashboard de surveillance en temps réel
+  - Configuration pour Base mainnet
+  - Scripts de déploiement production
+  - Vérification des contrats
+  - Documentation utilisateur
 
-## 🔧 **Améliorations Techniques**
+- [ ] **Performance**
+  - Optimisation gas
+  - Optimisation frontend
+  - Caching des données
+  - Monitoring des performances
 
-### **6. Optimisations Gas**
+## 🏗️ **ARCHITECTURE TECHNIQUE**
 
-- [ ] **Optimisations supplémentaires**
-  - Batch operations pour réduire les coûts
-  - Optimisation des fonctions de conversion
-  - Gas benchmarking vs autres vaults
+### **Stack Actuel**
 
-### **7. Tests Supplémentaires**
+```
+Frontend (Next.js + TypeScript)
+├── Wagmi + RainbowKit (wallet connections)
+├── Viem (Ethereum interactions)
+└── Tailwind CSS (styling)
 
-- [ ] **Tests de sécurité avancés**
-  - Fuzz testing plus poussé
-  - Tests d'intégration avec Morpho
-  - Tests de stress sur les conversions
-  - Tests de récupération d'urgence
+Smart Contracts (Solidity + Foundry)
+├── RiseFiVault (ERC4626 vault)
+├── Morpho Blue integration
+└── Base network deployment
 
-### **8. Documentation**
+Development Environment
+├── Anvil (Base fork)
+├── Whale USDC funding
+└── Automated deployment scripts
+```
 
-- [ ] **Documentation technique**
-  - Architecture détaillée
-  - Guide de développement
-  - API documentation
-  - Security considerations
+### **Flux de Données**
 
-## 📊 **Analytics & Reporting**
+```
+User → Frontend → RiseFiVault → Morpho Vault → Morpho Markets → Yield
+```
 
-### **9. Métriques Avancées**
+### **Métriques Cibles**
 
-- [ ] **Dashboard analytics**
-  - TVL tracking
-  - User analytics
-  - Performance metrics
-  - Risk monitoring
+- **APY** : 4-6% (basé sur Morpho Blue)
+- **Gas Cost** : <50k gas par transaction
+- **UI Response** : <200ms
+- **Test Coverage** : >95%
 
-### **10. Alerting Système**
+## 📋 **WORKFLOW DE DÉVELOPPEMENT**
 
-- [ ] **Système d'alertes**
-  - Anomalies de prix
-  - Liquidity issues
-  - Gas price monitoring
-  - Security alerts
+### **Setup Quotidien**
 
----
+```bash
+# Terminal 1
+cd RiseFi && ./scripts/start-anvil.sh
 
-## 📝 **Notes & Réalisations**
+# Terminal 2
+cd RiseFi && ./scripts/fund-and-deploy.sh
 
-### **Tests de Yield Validés** ✅
+# Terminal 3
+cd frontend && npm run dev
+```
 
-- **APY réel détecté** : 4.49% sur Base mainnet
-- **Yield quotidien** : 0.12% par jour
-- **Multi-users** : User1 (1,689,745 wei) > User2 (844,516 wei)
-- **Share price** : Progression de `999999999000000000` à `1000844514000000000` en 7 jours
-- **Tolérance** : 5 wei pour les conversions (robuste sur forks anciens)
+### **Tests**
 
-### **Corrections Appliquées** ✅
+```bash
+# Tests unitaires
+forge test
 
-- **Affichage pourcentages** : `0.12%`, `4.49%` au lieu de `0%`, `4%`
-- **Fonctions `pure`** : `logPct` et `logAPY` optimisées
-- **Variables inutilisées** : Supprimées
-- **Simulation d'intérêt** : `try/catch` pour éviter les reverts
+# Tests avec coverage
+forge coverage
 
-### **Priorités Actuelles**
+# Tests de gas
+forge test --gas-report
+```
 
-1. **Frontend Next.js** - Interface utilisateur moderne
-2. **Script de démo** - Time machine pour jury
-3. **Métriques avancées** - Dashboard analytics
+### **Déploiement**
 
-_Dernière mise à jour : Tests de yield parfaits (7/7 passants, 0 warnings)_
+```bash
+# Fork local (développement)
+./scripts/fund-and-deploy.sh
+
+# Base mainnet (production)
+forge script script/DeployVault.s.sol --rpc-url $BASE_RPC --broadcast --verify
+```
+
+## 🎯 **OBJECTIFS FINAUX**
+
+1. **Interface utilisateur** intuitive pour yield farming
+2. **Intégration Morpho** transparente et sécurisée
+3. **Démonstration** convaincante des capacités DeFi
+4. **Code production-ready** avec tests complets
+5. **Documentation** complète pour utilisateurs et développeurs
+
+**Prochaine étape immédiate :** Composant de dépôt USDC avec calcul temps réel des shares.

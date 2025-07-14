@@ -2,7 +2,7 @@ import { Chain } from "viem";
 
 // Configuration du réseau Anvil local (développement)
 export const anvilChain: Chain = {
-  id: 31337,
+  id: 31337, // Anvil local standard
   name: "Anvil Local",
   nativeCurrency: {
     decimals: 18,

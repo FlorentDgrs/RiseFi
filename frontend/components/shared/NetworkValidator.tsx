@@ -1,8 +1,10 @@
 "use client";
 import { useAccount, useBalance, useChainId } from "wagmi";
 import { formatEther } from "viem";
+import { useEffect, useState } from "react";
 
 export default function NetworkValidator() {
+  const [isMounted, setIsMounted] = useState(false);
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const { data: balance } = useBalance({
@@ -11,6 +13,21 @@ export default function NetworkValidator() {
 
   // Debug: Afficher la variable d'environnement
   const wcProjectId = process.env.NEXT_PUBLIC_WC_PROJECT_ID;
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return (
+      <div className="bg-gray-900/20 border border-gray-500/50 rounded-lg p-4 mb-4">
+        <h3 className="text-gray-400 font-semibold mb-2">🔄 Chargement...</h3>
+        <p className="text-gray-300 text-sm">
+          Initialisation de la connexion wallet...
+        </p>
+      </div>
+    );
+  }
 
   if (!isConnected) {
     return (
