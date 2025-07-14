@@ -1,7 +1,7 @@
 "use client";
 import Header from "@/components/shared/Header";
 import Footer from "@/components/shared/Footer";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import NetworkValidator from "@/components/shared/NetworkValidator";
 import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -26,8 +26,8 @@ export default function Home() {
         <p className="text-gray-300 mt-4">
           Votre plateforme DeFi simple et sécurisée.
         </p>
-        <div className="mt-8">
-          <ConnectButton />
+        <div className="mt-8 w-full max-w-md">
+          <NetworkValidator />
         </div>
       </main>
       <Footer />
