@@ -212,9 +212,12 @@ jobs:
       - name: Install dependencies
         run: forge install
 
+      - name: Build contracts (Foundry)
+        run: forge build
+
       - name: Run Slither security analysis
         uses: crytic/slither-action@v0.3.0
         with:
           target: "RiseFi/"
-          slither-args: "--foundry-out-dir out --filter-paths lib/ --exclude-dependencies"
+          slither-args: "--foundry-out-dir out --filter-paths lib/ --exclude-dependencies --ignore-compile"
           fail-on: none

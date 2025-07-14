@@ -7,7 +7,7 @@ import {
 } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
-import { anvilChain } from "../lib/chains";
+import { anvilChain } from "@/utils/chains";
 
 const config = getDefaultConfig({
   appName: "RiseFi",
