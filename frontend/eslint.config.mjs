@@ -12,6 +12,13 @@ const compat = new FlatCompat({
 const eslintConfig = [
   {
     ignores: ["**/node_modules/**", "**/.next/**", "**/public/**"],
+    settings: {
+      "import/resolver": {
+        typescript: {
+          project: "./tsconfig.json",
+        },
+      },
+    },
   },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
 ];
