@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 export default function Dashboard() {
-  const { isConnected, address } = useAccount();
+  const { isConnected } = useAccount();
   const router = useRouter();
 
   useEffect(() => {

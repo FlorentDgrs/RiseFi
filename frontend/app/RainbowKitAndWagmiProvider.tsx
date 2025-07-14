@@ -7,13 +7,13 @@ import {
 } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
-import { getChains } from "@/lib/chains";
+import { anvilChain } from "@/lib/chains";
 
 const config = getDefaultConfig({
   appName: "RiseFi",
   projectId:
     process.env.NEXT_PUBLIC_WC_PROJECT_ID || "YOUR_WALLETCONNECT_PROJECT_ID",
-  chains: getChains() as any, // Utilise notre configuration Anvil personnalisée
+  chains: [anvilChain], // Utilise notre configuration Anvil personnalisée
 });
 
 const queryClient = new QueryClient();
