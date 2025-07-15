@@ -27,9 +27,7 @@ contract MockMorphoVault is ERC4626 {
     event YieldAccrued(uint256 amount, uint256 timestamp);
 
     // ========== CONSTRUCTOR ==========
-    constructor(
-        IERC20 asset_
-    ) ERC4626(asset_) ERC20("Mock Morpho Vault", "mMorpho") {
+    constructor(IERC20 asset_) ERC4626(asset_) ERC20("Mock Morpho Vault", "mMorpho") {
         _lastYieldUpdate = block.timestamp;
     }
 
@@ -45,8 +43,7 @@ contract MockMorphoVault is ERC4626 {
 
         if (timeElapsed > 0 && totalAssets() > 0) {
             // Calcul du yield: totalAssets * rate * timeElapsed / (basisPoints * secondsPerYear)
-            uint256 yieldAmount = (totalAssets() * YIELD_RATE * timeElapsed) /
-                (BASIS_POINTS * SECONDS_PER_YEAR);
+            uint256 yieldAmount = (totalAssets() * YIELD_RATE * timeElapsed) / (BASIS_POINTS * SECONDS_PER_YEAR);
 
             if (yieldAmount > 0) {
                 _accumulatedYield += yieldAmount;
@@ -70,9 +67,7 @@ contract MockMorphoVault is ERC4626 {
         uint256 potentialYield = 0;
 
         if (timeElapsed > 0 && baseAssets > 0) {
-            potentialYield =
-                (baseAssets * YIELD_RATE * timeElapsed) /
-                (BASIS_POINTS * SECONDS_PER_YEAR);
+            potentialYield = (baseAssets * YIELD_RATE * timeElapsed) / (BASIS_POINTS * SECONDS_PER_YEAR);
         }
 
         return baseAssets + _accumulatedYield + potentialYield;
@@ -86,10 +81,7 @@ contract MockMorphoVault is ERC4626 {
      * @param receiver Adresse qui recevra les shares
      * @return shares Nombre de shares mintées
      */
-    function deposit(
-        uint256 assets,
-        address receiver
-    ) public override returns (uint256 shares) {
+    function deposit(uint256 assets, address receiver) public override returns (uint256 shares) {
         _accrueYield();
         return super.deposit(assets, receiver);
     }
@@ -100,10 +92,7 @@ contract MockMorphoVault is ERC4626 {
      * @param receiver Adresse qui recevra les shares
      * @return assets Montant d'assets déposés
      */
-    function mint(
-        uint256 shares,
-        address receiver
-    ) public override returns (uint256 assets) {
+    function mint(uint256 shares, address receiver) public override returns (uint256 assets) {
         _accrueYield();
         return super.mint(shares, receiver);
     }
@@ -115,11 +104,7 @@ contract MockMorphoVault is ERC4626 {
      * @param owner Propriétaire des shares
      * @return shares Nombre de shares brûlées
      */
-    function withdraw(
-        uint256 assets,
-        address receiver,
-        address owner
-    ) public override returns (uint256 shares) {
+    function withdraw(uint256 assets, address receiver, address owner) public override returns (uint256 shares) {
         _accrueYield();
         return super.withdraw(assets, receiver, owner);
     }
@@ -131,11 +116,7 @@ contract MockMorphoVault is ERC4626 {
      * @param owner Propriétaire des shares
      * @return assets Montant d'assets reçus
      */
-    function redeem(
-        uint256 shares,
-        address receiver,
-        address owner
-    ) public override returns (uint256 assets) {
+    function redeem(uint256 shares, address receiver, address owner) public override returns (uint256 assets) {
         _accrueYield();
         return super.redeem(shares, receiver, owner);
     }

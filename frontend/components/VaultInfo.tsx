@@ -1,6 +1,6 @@
 "use client";
 
-import { useReadContract, useReadContracts } from "wagmi";
+import { useReadContracts } from "wagmi";
 import { formatUnits } from "viem";
 import { useEffect, useState } from "react";
 import { CONTRACTS, ABIS } from "@/utils/contracts";
@@ -62,11 +62,7 @@ export default function VaultInfo({ className = "" }: VaultInfoProps) {
   }
 
   // Lecture des données du Morpho Vault pour APY
-  const {
-    data: morphoData,
-    error: morphoError,
-    isLoading: morphoLoading,
-  } = useReadContracts({
+  const { data: morphoData, error: morphoError } = useReadContracts({
     contracts: [
       {
         address: CONTRACTS.MORPHO_VAULT as `0x${string}`,

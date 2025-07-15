@@ -15,10 +15,8 @@ import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
  */
 contract DeployVault is Script {
     // ========== ADRESSES BASE MAINNET ==========
-    IERC20Metadata public constant USDC =
-        IERC20Metadata(0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913);
-    address public constant MORPHO_VAULT_ADDRESS =
-        0x3128a0F7f0ea68E7B7c9B00AFa7E41045828e858;
+    IERC20Metadata public constant USDC = IERC20Metadata(0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913);
+    address public constant MORPHO_VAULT_ADDRESS = 0x3128a0F7f0ea68E7B7c9B00AFa7E41045828e858;
 
     function run() external returns (RiseFiVault vault) {
         console.log("=== DEPLOIEMENT DU RISEFI VAULT ===");
