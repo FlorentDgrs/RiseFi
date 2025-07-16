@@ -46,6 +46,17 @@ contract RiseFiVault is ERC4626 {
     /// @notice Thrown when slippage exceeds tolerance during withdrawal
     error SlippageTooHigh(uint256 expected, uint256 actual);
 
+    // ========== EVENTS ==========
+
+    /// @notice Emitted when Morpho redemption is initiated
+    event MorphoRedemptionInitiated(uint256 riseFiShares, uint256 morphoSharesToRedeem);
+
+    /// @notice Emitted when Morpho redemption is completed
+    event MorphoRedemptionCompleted(uint256 morphoSharesRedeemed, uint256 usdcReceived);
+
+    /// @notice Emitted when RiseFi shares are burned
+    event RiseFiSharesBurned(address owner, uint256 sharesBurned);
+
     // ========== CONSTRUCTOR ==========
 
     /**
@@ -54,7 +65,7 @@ contract RiseFiVault is ERC4626 {
      * @param morphoVault_ The Morpho vault address to integrate with
      * @dev Validates asset is USDC and sets up maximum approval for Morpho vault
      */
-    constructor(IERC20 asset_, address morphoVault_) ERC20("RiseFi Vault", "rfVault") ERC4626(asset_) {
+    constructor(IERC20 asset_, address morphoVault_) ERC20("RiseFi Vault", "rfUSDC") ERC4626(asset_) {
         if (address(asset_) != USDC) {
             revert InvalidAsset(address(asset_), USDC);
         }
@@ -163,78 +174,104 @@ contract RiseFiVault is ERC4626 {
         return Math.mulDiv(assets, eff, totalAssets(), rounding);
     }
 
-    // ========== WITHDRAWAL LOGIC ==========
+    // ========== WITHDRAWAL/REDEMPTION OVERRIDES ==========
 
     /**
-     * @notice Override withdrawal: burn RiseFi shares, withdraw from Morpho, transfer USDC
-     * @param caller The address calling the withdrawal
-     * @param receiver The address receiving the assets
-     * @param owner The address owning the shares
-     * @param assets The amount of assets to withdraw
-     * @param shares The amount of shares to burn
-     * @dev Implements slippage protection and deflationary token protection
+     * @notice Withdraw assets by burning shares - delegates to redeem logic
+     * @dev Implements ERC4626 withdraw by delegating to our redeem implementation
      */
     function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares)
         internal
         override
     {
-        if (caller != owner) {
-            _spendAllowance(owner, caller, shares);
-        }
-
-        _burn(owner, shares); // burn RiseFi shares
-
-        // Check balance before withdrawal
-        uint256 balanceBefore = IERC20(asset()).balanceOf(address(this));
-
-        // Get USDC by withdrawing assets from Morpho vault
-        morphoVault.withdraw(assets, address(this), address(this));
-
-        // Calculate how much we actually received
-        uint256 balanceAfter = IERC20(asset()).balanceOf(address(this));
-
-        // Protection against deflationary tokens
-        require(balanceAfter >= balanceBefore, "Unexpected balance decrease");
-
-        uint256 received = balanceAfter - balanceBefore;
-
-        // 2 wei tolerance to avoid floor/rounding effects
-        uint256 tolerance = 2;
-        if (received + tolerance < assets || received > assets + tolerance) {
-            revert SlippageTooHigh(assets, received);
-        }
-
-        // Secure transfer to user
-        IERC20(asset()).safeTransfer(receiver, assets);
-
-        emit Withdraw(caller, receiver, owner, assets, shares);
+        // Delegate to redeem implementation for consistent business logic
+        _redeem(caller, receiver, owner, shares, assets);
     }
 
     // ========== MINT/REDEEM OVERRIDES ==========
 
     /**
-     * @notice Mint shares by depositing assets
-     * @param caller The address calling the mint
-     * @param receiver The address receiving the shares
-     * @param shares The amount of shares to mint
-     * @param assets The amount of assets required
-     * @dev Delegates to _deposit with calculated assets
+     * @notice Minting is disabled - use deposit() instead
+     * @dev Forces users to use deposit() which is more predictable and robust
      */
-    function _mint(address caller, address receiver, uint256 shares, uint256 assets) internal {
-        _deposit(caller, receiver, assets, shares);
+    function _mint(address, address, uint256, uint256) internal pure {
+        revert("RiseFiVault: Use deposit() instead of mint()");
     }
 
     /**
-     * @notice Redeem shares by withdrawing assets
+     * @notice Redeem RiseFi shares for USDC assets
      * @param caller The address calling the redeem
-     * @param receiver The address receiving the assets
+     * @param receiver The address receiving the USDC
      * @param owner The address owning the shares
-     * @param shares The amount of shares to redeem
-     * @param assets The amount of assets to receive
-     * @dev Delegates to _withdraw with calculated assets
+     * @param shares The amount of RiseFi shares to redeem
+     * @dev Core redemption logic: burn RiseFi shares → redeem Morpho shares → transfer USDC
      */
-    function _redeem(address caller, address receiver, address owner, uint256 shares, uint256 assets) internal {
-        _withdraw(caller, receiver, owner, assets, shares);
+    function _redeem(address caller, address receiver, address owner, uint256 shares, uint256 /* assets */ ) internal {
+        // Early return for zero shares
+        if (shares == 0) {
+            emit Withdraw(caller, receiver, owner, 0, 0);
+            return;
+        }
+
+        // Permission check
+        if (caller != owner) {
+            _spendAllowance(owner, caller, shares);
+        }
+
+        // Calculate Morpho shares to redeem BEFORE burning shares
+        uint256 morphoShares = IERC20(address(morphoVault)).balanceOf(address(this));
+        uint256 effectiveSupply = _effectiveSupply();
+
+        if (effectiveSupply == 0) {
+            revert("RiseFiVault: No effective supply");
+        }
+
+        // Calculate the proportion of Morpho shares to redeem based on RiseFi shares
+        uint256 morphoSharesToRedeem = (shares * morphoShares) / effectiveSupply;
+
+        // Safety check: don't redeem more than we have
+        if (morphoSharesToRedeem > morphoShares) {
+            morphoSharesToRedeem = morphoShares;
+        }
+
+        // Emit event for Morpho redemption initiation
+        emit MorphoRedemptionInitiated(shares, morphoSharesToRedeem);
+
+        // Execute redemption from Morpho
+        uint256 balanceBefore = IERC20(asset()).balanceOf(address(this));
+        morphoVault.redeem(morphoSharesToRedeem, address(this), address(this));
+        uint256 balanceAfter = IERC20(asset()).balanceOf(address(this));
+
+        // Emit event for Morpho redemption completion
+        uint256 usdcReceived = balanceAfter - balanceBefore;
+        emit MorphoRedemptionCompleted(morphoSharesToRedeem, usdcReceived);
+
+        // Burn RiseFi shares after successful Morpho redemption
+        _burn(owner, shares);
+        emit RiseFiSharesBurned(owner, shares);
+
+        // Validate redemption
+        require(balanceAfter >= balanceBefore, "Unexpected balance decrease");
+        uint256 received = balanceAfter - balanceBefore;
+
+        // Calculate expected assets from shares for slippage protection
+        uint256 expectedAssets = _convertToAssets(shares, Math.Rounding.Floor);
+
+        // Skip slippage protection if expected assets is very small (dust amounts)
+        if (expectedAssets > 0) {
+            // Slippage protection: only check minimum (0.1% tolerance)
+            uint256 tolerance = (expectedAssets * 100) / 100000;
+            if (tolerance < 100) tolerance = 100; // Minimum 100 wei tolerance
+
+            if (received + tolerance < expectedAssets) {
+                revert SlippageTooHigh(expectedAssets, received);
+            }
+        }
+
+        // Transfer USDC to user - transfer what we actually received
+        IERC20(asset()).safeTransfer(receiver, received);
+
+        emit Withdraw(caller, receiver, owner, received, shares);
     }
 
     // ========== PREVIEW FUNCTIONS ==========
@@ -288,11 +325,10 @@ contract RiseFiVault is ERC4626 {
     }
 
     /**
-     * @notice Get the maximum amount of shares that can be minted
-     * @return The maximum mint amount
+     * @notice Minting is disabled - returns 0
      */
     function maxMint(address) public pure override returns (uint256) {
-        return type(uint256).max;
+        return 0;
     }
 
     /**
@@ -301,8 +337,7 @@ contract RiseFiVault is ERC4626 {
      * @return The maximum withdrawal amount
      */
     function maxWithdraw(address owner) public view override returns (uint256) {
-        uint256 shares = balanceOf(owner);
-        return convertToAssets(shares);
+        return _convertToAssets(balanceOf(owner), Math.Rounding.Floor);
     }
 
     /**

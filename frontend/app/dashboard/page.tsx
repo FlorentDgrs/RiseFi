@@ -1,10 +1,7 @@
 "use client";
 import Header from "@/components/shared/Header";
 import Footer from "@/components/shared/Footer";
-import NetworkValidator from "@/components/shared/NetworkValidator";
-import NetworkSwitcher from "@/components/shared/NetworkSwitcher";
-import VaultInfo from "@/components/VaultInfo";
-import { NetworkEnforcer } from "@/components/NetworkEnforcer";
+import TabbedVaultActions from "@/components/shared/TabbedVaultActions";
 import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -45,22 +42,15 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-gray-800 to-black">
-      <NetworkEnforcer />
       <Header />
-      <main className="flex-1 flex flex-col items-center justify-center p-8">
-        <div className="w-full max-w-2xl space-y-6">
-          <h1 className="text-3xl font-bold text-yellow-400 text-center mb-8">
+      <main className="flex-1 p-8">
+        <div className="max-w-2xl mx-auto">
+          <h1 className="text-3xl font-bold text-yellow-400 mb-8 text-center">
             Dashboard RiseFi
           </h1>
 
-          {/* Switcher de réseau */}
-          <NetworkSwitcher />
-
-          {/* Validation de la connexion au fork */}
-          <NetworkValidator />
-
-          {/* Informations du vault */}
-          <VaultInfo className="bg-gray-800 border-gray-700" />
+          {/* Interface en onglets pour les actions du vault */}
+          <TabbedVaultActions />
         </div>
       </main>
       <Footer />

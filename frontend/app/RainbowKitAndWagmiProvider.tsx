@@ -7,24 +7,33 @@ import {
 } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
-import { foundry, base } from "viem/chains";
 import { http } from "viem";
+import { anvilChain } from "../utils/chains";
+import { NetworkEnforcer } from "../components/NetworkEnforcer";
 
+// Configuration pour développement local
+// Note: Les erreurs WalletConnect 403 et Reown analytics sont normales en développement
+// et n'affectent pas les transactions - elles peuvent être ignorées
 const config = getDefaultConfig({
   appName: "RiseFi",
-  projectId:
-    process.env.NEXT_PUBLIC_WC_PROJECT_ID || "YOUR_WALLETCONNECT_PROJECT_ID",
-  chains: [foundry, base],
+  projectId: "00000000000000000000000000000000", // ProjectId factice
+  chains: [anvilChain],
   transports: {
-    [foundry.id]: http(
-      process.env.NEXT_PUBLIC_RPC_URL || "http://127.0.0.1:8545"
-    ),
-    [base.id]: http("https://mainnet.base.org"),
+    [anvilChain.id]: http("http://127.0.0.1:8545"),
   },
   ssr: true,
 });
 
-const queryClient = new QueryClient();
+// Configuration du QueryClient avec gestion d'erreurs
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    },
+  },
+});
 
 const RainbowKitAndWagmiProvider = ({
   children,
@@ -43,7 +52,9 @@ const RainbowKitAndWagmiProvider = ({
             overlayBlur: "small",
           })}
           locale="en-US"
+          showRecentTransactions={true}
         >
+          <NetworkEnforcer />
           {children}
         </RainbowKitProvider>
       </QueryClientProvider>

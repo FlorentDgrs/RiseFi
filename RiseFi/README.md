@@ -27,19 +27,113 @@ Smart contracts for the **RiseFi** DeFi yield vault platform, built with Foundry
 - **ERC-4626 Compliance**: Full standard compliance with proper rounding
 - **Professional Documentation**: Complete NatSpec documentation in English
 
-## 🚀 Development
+## 🚀 Quick Start
 
 ### Prerequisites
 
 - [Foundry](https://getfoundry.sh/) installed
+- [Node.js](https://nodejs.org/) and npm for frontend
 - Base network RPC access for fork testing
 
 ### Installation
 
 ```bash
-# Install dependencies
+# Install Foundry dependencies
 forge install
+
+# Install frontend dependencies
+cd frontend && npm install
 ```
+
+## 🎯 **DÉPLOIEMENT COMPLET - SÉQUENCE SIMPLIFIÉE**
+
+### **1. Déploiement Backend Automatisé**
+
+```bash
+cd RiseFi && ./scripts/deploy-complete.sh
+```
+
+**Ce script fait automatiquement :**
+
+- 🔄 Démarre Anvil (fork Base network)
+- 🧹 Nettoie les artifacts
+- 🏦 Déploie le vault RiseFi
+- 📍 **Affiche l'adresse du vault**
+- 💰 Finance la whale avec ETH
+- 💸 Finance les wallets avec USDC (10,000 USDC chacun)
+- ✅ Vérifie tous les soldes
+- 📋 Affiche un résumé complet
+
+**Résultat attendu :**
+
+```
+🎯 ========================================
+🏦 VAULT RISEFI DÉPLOYÉ AVEC SUCCÈS !
+📍 Adresse: 0x2c90F2f1A1fE7279C0321787A93015bF116Dc36A
+🎯 ========================================
+
+🔗 Adresses importantes:
+   📍 Vault RiseFi: 0x2c90F2f1A1fE7279C0321787A93015bF116Dc36A
+   📍 USDC: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+   📍 Whale: 0x122fDD9fEcbc82F7d4237C0549a5057E31c8EF8D
+```
+
+### **2. Démarrer le Frontend**
+
+```bash
+cd frontend && npm run dev
+```
+
+**Frontend accessible sur :** `http://localhost:3000/dashboard`
+
+### **3. Configuration MetaMask**
+
+- **Réseau** : Local (Chain ID: 31337)
+- **RPC URL** : `http://localhost:8545`
+- **Comptes de test** : Utiliser les clés privées Anvil
+
+### **4. Tester l'Application**
+
+1. Connecter MetaMask au réseau local
+2. Aller sur `http://localhost:3000/dashboard`
+3. Tester le dépôt USDC → rfUSDC
+4. Tester le retrait rfUSDC → USDC
+
+### **5. Arrêter les Services**
+
+```bash
+cd RiseFi && ./scripts/stop-all.sh
+```
+
+## 🔧 **Scripts Disponibles**
+
+### **Backend (RiseFi/scripts/)**
+
+- **`deploy-complete.sh`** : Déploiement complet automatisé (Anvil + Contracts + Funding)
+- **`stop-all.sh`** : Arrêt propre de tous les services
+
+### **Solidity (RiseFi/script/)**
+
+- **`DeployVault.s.sol`** : Déploiement du vault RiseFi
+- **`FundTestWallets.s.sol`** : Financement des wallets de test
+
+## 📊 **Adresses Importantes**
+
+### **Réseau Local (Anvil - Chain ID: 31337)**
+
+- **USDC** : `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`
+- **Whale USDC** : `0x122fDD9fEcbc82F7d4237C0549a5057E31c8EF8D`
+- **Vault RiseFi** : Affiché lors du déploiement
+
+### **Comptes de Test (Anvil)**
+
+- **Account 0** : `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`
+- **Account 1** : `0x70997970C51812dc3A010C7d01b50e0d17dc79C8`
+- **Account 2** : `0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC`
+
+_Chaque compte est financé avec 10,000 USDC pour les tests_
+
+## 🛠️ **Développement Avancé**
 
 ### Build
 
@@ -50,170 +144,72 @@ forge build
 ### Test
 
 ```bash
-# Run all tests with gas report
-forge test --gas-report
+# Tests unitaires
+forge test
 
-# Run fork tests (requires Base RPC)
-forge test --match-contract "Fork" --fork-url https://mainnet.base.org --fork-block-number 32778110
+# Tests avec verbosité
+forge test -vvv
 
-# Run unit tests only
-forge test --no-match-contract "Fork" --gas-report
-
-# Run with verbose output
-forge test -v
+# Tests de couverture
+forge coverage
 ```
 
-### Format
+### Déploiement Manuel
 
 ```bash
-forge fmt
+# Démarrer Anvil
+anvil --fork-url https://mainnet.base.org --fork-block-number 32778110
+
+# Déployer le vault
+forge script script/DeployVault.s.sol --rpc-url http://localhost:8545 --broadcast --private-key 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d
+
+# Financer les wallets
+forge script script/FundTestWallets.s.sol:FundTestWallets --rpc-url http://localhost:8545 --broadcast --unlocked
 ```
 
-## 🧪 Testing
-
-### Test Results
-
-```
-Ran 35 tests for test/RiseFiVaultFork.t.sol:RiseFiVaultForkTest
-✅ 35 passed; 0 failed; 0 skipped
-```
-
-### Test Coverage
-
-- **Unit Tests**: Core functionality and edge cases
-- **Fork Tests**: Real integration with Morpho vaults on Base
-- **Fuzz Tests**: Property-based testing for robustness
-- **Gas Optimization**: Comprehensive gas reporting
-
-### Test Structure
-
-```bash
-test/
-├── RiseFiVaultFork.t.sol      # Comprehensive fork tests (35 tests)
-│   ├── Infrastructure Tests    # USDC and Morpho integration
-│   ├── Constructor Tests       # Contract initialization
-│   ├── Core Functionality      # Deposit and withdrawal flows
-│   ├── Constants Tests         # Contract constants validation
-│   ├── Conversion Tests        # ERC-4626 conversion functions
-│   ├── Withdrawal Tests        # Comprehensive withdrawal scenarios
-│   └── Fuzz Tests             # Property-based testing
-└── unit/                       # Unit tests
-```
-
-### Running Tests
-
-```bash
-# All tests with coverage
-forge test --gas-report
-
-# Fork tests (requires Base RPC)
-forge test --match-contract "Fork" --fork-url https://mainnet.base.org --fork-block-number 32778110
-
-# Unit tests only
-forge test --no-match-contract "Fork" --gas-report
-```
-
-## 📁 Project Structure
+## 📁 **Structure du Projet**
 
 ```
 RiseFi/
+├── scripts/
+│   ├── deploy-complete.sh    # 🚀 Déploiement complet
+│   └── stop-all.sh          # 🛑 Arrêt services
+├── script/
+│   ├── DeployVault.s.sol    # 🏦 Déploiement vault
+│   └── FundTestWallets.s.sol # 💰 Financement wallets
 ├── src/
-│   ├── RiseFiVault.sol         # ERC-4626 vault with Morpho integration
-│   └── interfaces/             # Contract interfaces
+│   └── RiseFiVault.sol      # 📜 Contrat principal
 ├── test/
-│   ├── RiseFiVaultFork.t.sol  # Comprehensive fork tests (35 tests)
-│   └── unit/                   # Unit tests
-├── scripts/                    # Deployment scripts
-├── lib/                        # Dependencies (OpenZeppelin, etc.)
-├── foundry.toml               # Foundry configuration
-└── README.md                  # This file
+│   └── RiseFiVault.t.sol    # 🧪 Tests
+└── frontend/
+    ├── components/shared/
+    │   └── VaultActions.tsx  # 🎯 Interface principale
+    └── app/dashboard/
+        └── page.tsx         # 📱 Page dashboard
 ```
 
-## 🔧 Configuration
+## 🎯 **Workflow Recommandé**
 
-### Foundry Profiles
+1. **Développement** : `./scripts/deploy-complete.sh` → `cd frontend && npm run dev`
+2. **Tests** : Utiliser `http://localhost:3000/dashboard` avec MetaMask
+3. **Nettoyage** : `./scripts/stop-all.sh`
 
-- **default**: Standard development profile
-- **ci**: Optimized for CI/CD pipeline
-- **fork**: Base network fork configuration
+## 📝 **Notes Importantes**
 
-### Networks
+- **Réseau** : Fork de Base mainnet (block 32778110)
+- **Tokens** : USDC (6 décimales) → rfUSDC (18 décimales)
+- **Sécurité** : Protection contre les attaques d'inflation
+- **Gas** : Optimisé pour les coûts de transaction
+- **Tests** : Couverture complète avec cas limites
 
-- **Base Mainnet**: Production target with Morpho integration
-- **Base Sepolia**: Testnet deployment
-- **Local Fork**: Development and testing with Base fork
+## 🤝 **Contribution**
 
-## 🚀 Deployment
+1. Fork le projet
+2. Créer une branche feature
+3. Commit les changements
+4. Push vers la branche
+5. Ouvrir une Pull Request
 
-### Local Development
+## 📄 **License**
 
-```bash
-# Start local node
-anvil
-
-# Deploy contracts
-forge script script/Deploy.s.sol --rpc-url http://localhost:8545 --private-key 0x...
-```
-
-### Base Network
-
-```bash
-# Deploy to Base Sepolia
-forge script script/Deploy.s.sol --rpc-url base_sepolia --broadcast --verify
-
-# Deploy to Base Mainnet
-forge script script/Deploy.s.sol --rpc-url base_mainnet --broadcast --verify
-```
-
-## 🔐 Security
-
-- **OpenZeppelin Standards**: Battle-tested security patterns
-- **Comprehensive Testing**: 35 tests with 100% pass rate
-- **Slither Analysis**: Automated security scanning
-- **Professional Documentation**: Complete NatSpec documentation
-- **Inflation Attack Protection**: Dead shares mechanism
-- **Slippage Protection**: Built-in tolerance for withdrawals
-
-## 📊 Gas Optimization
-
-### Deployment Cost
-
-- **RiseFiVault**: 2,228,868 gas
-
-### Key Functions
-
-- **deposit**: ~180,000 gas (average)
-- **withdraw**: ~120,000 gas (average)
-- **convertToAssets**: ~21,000 gas (average)
-- **convertToShares**: ~21,000 gas (average)
-
-## 📚 Documentation
-
-- **Contract Documentation**: Complete NatSpec documentation in English
-- **Test Documentation**: Comprehensive test explanations
-- **Integration Guide**: Morpho Blue integration details
-- **Security Analysis**: Detailed security considerations
-
-### Key Documentation Features
-
-- **Professional NatSpec**: Complete parameter and return documentation
-- **Technical Explanations**: Detailed explanations of complex logic
-- **Security Considerations**: Clear documentation of security measures
-- **Integration Details**: Morpho Blue integration specifics
-
-## 🤝 Contributing
-
-1. Follow Solidity coding standards
-2. Add comprehensive tests for new features
-3. Ensure all tests pass (35/35)
-4. Update documentation
-5. Run security analysis with Slither
-6. Maintain professional documentation standards
-
-## 📄 License
-
-MIT License - see [LICENSE](../LICENSE) file for details.
-
----
-
-**Built with ❤️ using Foundry and OpenZeppelin**
+Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
