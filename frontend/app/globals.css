@@ -1,31 +1,91 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
+/* Variables CSS RiseFi personnalisées */
 :root {
+  --radius: 0.625rem;
+
+  /* Couleurs RiseFi - Thème sombre par défaut */
+  --background: #111827; /* gray-900 */
+  --foreground: #f9fafb; /* gray-50 */
+  --card: #1f2937; /* gray-800 */
+  --card-foreground: #f9fafb; /* gray-50 */
+  --popover: #1f2937; /* gray-800 */
+  --popover-foreground: #f9fafb; /* gray-50 */
+  --primary: #f5c249; /* RainbowKit yellow */
+  --primary-foreground: #111827; /* gray-900 */
+  --secondary: #374151; /* gray-700 */
+  --secondary-foreground: #f9fafb; /* gray-50 */
+  --muted: #374151; /* gray-700 */
+  --muted-foreground: #9ca3af; /* gray-400 */
+  --accent: #374151; /* gray-700 */
+  --accent-foreground: #f9fafb; /* gray-50 */
+  --destructive: #ef4444; /* red-500 */
+  --destructive-foreground: #f9fafb; /* gray-50 */
+  --border: #4b5563; /* gray-600 */
+  --input: #374151; /* gray-700 */
+  --ring: #f5c249; /* RainbowKit yellow */
+
+  /* Couleurs RiseFi spécifiques */
+  --risefi-yellow: #f5c249; /* RainbowKit yellow */
+  --risefi-yellow-hover: #e6b142; /* RainbowKit yellow hover */
+  --risefi-gray-dark: #111827; /* gray-900 */
+  --risefi-gray-medium: #1f2937; /* gray-800 */
+  --risefi-gray-light: #374151; /* gray-700 */
+}
+
+/* Thème clair (optionnel) */
+.light {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #111827;
+  --card: #f9fafb;
+  --card-foreground: #111827;
+  --popover: #f9fafb;
+  --popover-foreground: #111827;
+  --primary: #f5c249;
+  --primary-foreground: #111827;
+  --secondary: #f3f4f6;
+  --secondary-foreground: #111827;
+  --muted: #f3f4f6;
+  --muted-foreground: #6b7280;
+  --accent: #f3f4f6;
+  --accent-foreground: #111827;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #e5e7eb;
+  --input: #f3f4f6;
+  --ring: #f5c249;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-/* body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-} */
-
+/* Styles de base */
 html,
 body {
   height: 100%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Classes utilitaires RiseFi */
+.bg-risefi-gradient {
+  background: linear-gradient(135deg, #111827 0%, #1f2937 50%, #374151 100%);
+}
+
+.text-risefi-yellow {
+  color: var(--risefi-yellow);
+}
+
+.bg-risefi-yellow {
+  background-color: var(--risefi-yellow);
+}
+
+.border-risefi-yellow {
+  border-color: var(--risefi-yellow);
 }

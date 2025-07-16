@@ -9,7 +9,31 @@ import { WagmiProvider } from "wagmi";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { http } from "viem";
 import { anvilChain } from "../utils/chains";
-import { NetworkEnforcer } from "../components/NetworkEnforcer";
+import { NetworkEnforcer } from "../components/shared/NetworkEnforcer";
+
+// Define Anvil chain for RainbowKit
+const rainbowKitAnvilChain = {
+  id: 31337,
+  name: "Anvil Local",
+  iconUrl: "https://s2.coinmarketcap.com/static/img/coins/64x64/1027.png",
+  iconBackground: "#000000",
+  nativeCurrency: {
+    decimals: 18,
+    name: "Ether",
+    symbol: "ETH",
+  },
+  rpcUrls: {
+    default: { http: ["http://127.0.0.1:8545"] },
+    public: { http: ["http://127.0.0.1:8545"] },
+  },
+  blockExplorers: {
+    default: {
+      name: "Anvil Local",
+      url: "http://127.0.0.1:8545",
+    },
+  },
+  testnet: true,
+};
 
 // Configuration pour développement local
 // Note: Les erreurs WalletConnect 403 et Reown analytics sont normales en développement
@@ -17,11 +41,11 @@ import { NetworkEnforcer } from "../components/NetworkEnforcer";
 const config = getDefaultConfig({
   appName: "RiseFi",
   projectId: "00000000000000000000000000000000", // ProjectId factice
-  chains: [anvilChain],
+  chains: [rainbowKitAnvilChain],
   transports: {
     [anvilChain.id]: http("http://127.0.0.1:8545"),
   },
-  ssr: true,
+  ssr: false, // Désactiver SSR pour éviter les erreurs IndexedDB
 });
 
 // Configuration du QueryClient avec gestion d'erreurs

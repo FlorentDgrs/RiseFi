@@ -38,32 +38,24 @@ export const ABIS = {
   // ABI ERC20 minimal pour USDC
   ERC20: [
     {
-      name: "name",
+      name: "allowance",
       type: "function",
       stateMutability: "view",
-      inputs: [],
-      outputs: [{ name: "", type: "string" }],
-    },
-    {
-      name: "symbol",
-      type: "function",
-      stateMutability: "view",
-      inputs: [],
-      outputs: [{ name: "", type: "string" }],
-    },
-    {
-      name: "decimals",
-      type: "function",
-      stateMutability: "view",
-      inputs: [],
-      outputs: [{ name: "", type: "uint8" }],
-    },
-    {
-      name: "totalSupply",
-      type: "function",
-      stateMutability: "view",
-      inputs: [],
+      inputs: [
+        { name: "owner", type: "address" },
+        { name: "spender", type: "address" },
+      ],
       outputs: [{ name: "", type: "uint256" }],
+    },
+    {
+      name: "approve",
+      type: "function",
+      stateMutability: "nonpayable",
+      inputs: [
+        { name: "spender", type: "address" },
+        { name: "amount", type: "uint256" },
+      ],
+      outputs: [{ name: "", type: "bool" }],
     },
     {
       name: "balanceOf",
@@ -81,26 +73,6 @@ export const ABIS = {
         { name: "amount", type: "uint256" },
       ],
       outputs: [{ name: "", type: "bool" }],
-    },
-    {
-      name: "approve",
-      type: "function",
-      stateMutability: "nonpayable",
-      inputs: [
-        { name: "spender", type: "address" },
-        { name: "amount", type: "uint256" },
-      ],
-      outputs: [{ name: "", type: "bool" }],
-    },
-    {
-      name: "allowance",
-      type: "function",
-      stateMutability: "view",
-      inputs: [
-        { name: "owner", type: "address" },
-        { name: "spender", type: "address" },
-      ],
-      outputs: [{ name: "", type: "uint256" }],
     },
   ] as const,
 
