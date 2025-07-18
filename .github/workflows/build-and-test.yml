@@ -95,7 +95,7 @@ jobs:
           echo "=== Running Comprehensive Test Suite ==="
           forge test \
             --match-contract 'RiseFiVaultOptimizedTest' \
-            --fork-url https://base-mainnet.g.alchemy.com/v2/demo \
+            --fork-url https://mainnet.base.org \
             --fork-block-number 32778110 \
             --fork-retry-backoff 300 \
             --gas-report
@@ -139,6 +139,6 @@ jobs:
         uses: crytic/slither-action@v0.3.0
         with:
           target: "RiseFi/"
-          slither-args: "--foundry-out-dir out --exclude-dependencies --config-file RiseFi/slither.config.json"
+          slither-args: "--foundry-out-dir out --exclude-dependencies --config-file RiseFi/slither.config.json --filter-paths lib/,test/,script/"
           ignore-compile: true
           fail-on: medium
