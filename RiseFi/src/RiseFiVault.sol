@@ -29,8 +29,7 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
     uint256 public constant DEAD_SHARES = 1000;
 
     /// @notice Dead shares address
-    address public constant DEAD_ADDRESS =
-        0x000000000000000000000000000000000000dEaD;
+    address public constant DEAD_ADDRESS = 0x000000000000000000000000000000000000dEaD;
 
     /// @notice Authorized asset: USDC on Base network
     address public constant USDC = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
@@ -42,8 +41,7 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
     uint256 public constant BASIS_POINTS = 10000;
 
     /// @notice Pre-calculated: BASIS_POINTS - SLIPPAGE_TOLERANCE (gas optimization)
-    uint256 private constant BASIS_POINTS_MINUS_SLIPPAGE =
-        BASIS_POINTS - SLIPPAGE_TOLERANCE;
+    uint256 private constant BASIS_POINTS_MINUS_SLIPPAGE = BASIS_POINTS - SLIPPAGE_TOLERANCE;
 
     /// @notice Underlying Morpho vault (MetaMorpho ERC4626)
     IERC4626 public immutable morphoVault;
@@ -107,19 +105,10 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
     event DeadSharesMinted(uint256 deadShares, address deadAddress);
 
     /// @notice Emitted when slippage guard is triggered
-    event SlippageGuardTriggered(
-        address indexed user,
-        uint256 expected,
-        uint256 actual,
-        bytes32 indexed operation
-    );
+    event SlippageGuardTriggered(address indexed user, uint256 expected, uint256 actual, bytes32 indexed operation);
 
     /// @notice Emitted when emergency withdraw is executed
-    event EmergencyWithdraw(
-        address indexed user,
-        uint256 shares,
-        uint256 assets
-    );
+    event EmergencyWithdraw(address indexed user, uint256 shares, uint256 assets);
 
     // ========== CONSTRUCTOR ==========
 
@@ -128,10 +117,11 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
      * @param asset_ The underlying asset (must be USDC)
      * @param morphoVault_ The Morpho vault address to integrate with
      */
-    constructor(
-        IERC20 asset_,
-        address morphoVault_
-    ) ERC20("RiseFi Vault", "rfUSDC") ERC4626(asset_) Ownable(msg.sender) {
+    constructor(IERC20 asset_, address morphoVault_)
+        ERC20("RiseFi Vault", "rfUSDC")
+        ERC4626(asset_)
+        Ownable(msg.sender)
+    {
         if (address(asset_) != USDC) {
             revert InvalidAsset(address(asset_), USDC);
         }
@@ -152,30 +142,17 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
 
     /// @notice Validates slippage for redeem operations
     /// @dev Compares expected assets vs actual assets received
-    function _validateRedeemSlippage(
-        uint256 expectedAssets,
-        uint256 actualAssets
-    ) internal {
-        uint256 minAcceptableAssets = (expectedAssets *
-            BASIS_POINTS_MINUS_SLIPPAGE) / BASIS_POINTS;
+    function _validateRedeemSlippage(uint256 expectedAssets, uint256 actualAssets) internal {
+        uint256 minAcceptableAssets = (expectedAssets * BASIS_POINTS_MINUS_SLIPPAGE) / BASIS_POINTS;
         if (actualAssets < minAcceptableAssets) {
-            emit SlippageGuardTriggered(
-                msg.sender,
-                expectedAssets,
-                actualAssets,
-                bytes32("redeem")
-            );
+            emit SlippageGuardTriggered(msg.sender, expectedAssets, actualAssets, bytes32("redeem"));
             revert SlippageExceeded(expectedAssets, actualAssets);
         }
     }
 
     /// @notice Calculates Morpho shares to redeem with validation
-    function _calculateMorphoSharesToRedeem(
-        uint256 shares
-    ) internal view returns (uint256) {
-        uint256 morphoShares = IERC20(address(morphoVault)).balanceOf(
-            address(this)
-        );
+    function _calculateMorphoSharesToRedeem(uint256 shares) internal view returns (uint256) {
+        uint256 morphoShares = IERC20(address(morphoVault)).balanceOf(address(this));
         uint256 supply = totalSupply();
         uint256 effectiveSupply;
         unchecked {
@@ -191,10 +168,7 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
      * @return Total assets value by converting Morpho shares to assets
      */
     function totalAssets() public view override returns (uint256) {
-        return
-            morphoVault.convertToAssets(
-                IERC20(address(morphoVault)).balanceOf(address(this))
-            );
+        return morphoVault.convertToAssets(IERC20(address(morphoVault)).balanceOf(address(this)));
     }
 
     /**
@@ -204,10 +178,7 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
      * @return shares The amount of shares received
      * @dev Reverts if slippage exceeds SLIPPAGE_TOLERANCE
      */
-    function deposit(
-        uint256 assets,
-        address receiver
-    )
+    function deposit(uint256 assets, address receiver)
         public
         override
         nonReentrant
@@ -240,11 +211,7 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
      * @param owner The address owning the shares
      * @return assets The amount of assets received
      */
-    function redeem(
-        uint256 shares,
-        address receiver,
-        address owner
-    )
+    function redeem(uint256 shares, address receiver, address owner)
         public
         override
         nonReentrant
@@ -269,11 +236,7 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
 
         // Execute redemption
         _burn(owner, shares);
-        uint256 actualAssets = morphoVault.redeem(
-            morphoSharesToRedeem,
-            receiver,
-            address(this)
-        );
+        uint256 actualAssets = morphoVault.redeem(morphoSharesToRedeem, receiver, address(this));
 
         // Validate slippage
         _validateRedeemSlippage(expectedAssets, actualAssets);
@@ -297,9 +260,7 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
     // ========== LIQUIDITY HELPERS ==========
 
     /// @notice Validates liquidity is sufficient for redemption
-    function _validateRedemptionLiquidity(
-        uint256 morphoSharesToRedeem
-    ) internal view {
+    function _validateRedemptionLiquidity(uint256 morphoSharesToRedeem) internal view {
         uint256 maxRedeemable = morphoVault.maxRedeem(address(this));
         if (morphoSharesToRedeem > maxRedeemable) {
             revert InsufficientLiquidity(morphoSharesToRedeem, maxRedeemable);
@@ -312,10 +273,7 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
      * @notice Convert shares to assets with specified rounding
      * @dev Accounts for dead shares in calculation
      */
-    function _convertToAssets(
-        uint256 shares,
-        Math.Rounding rounding
-    ) internal view override returns (uint256) {
+    function _convertToAssets(uint256 shares, Math.Rounding rounding) internal view override returns (uint256) {
         uint256 supply = totalSupply();
         uint256 assets = totalAssets();
 
@@ -335,10 +293,7 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
      * @notice Convert assets to shares with specified rounding
      * @dev Accounts for dead shares in calculation
      */
-    function _convertToShares(
-        uint256 assets,
-        Math.Rounding rounding
-    ) internal view override returns (uint256) {
+    function _convertToShares(uint256 assets, Math.Rounding rounding) internal view override returns (uint256) {
         uint256 supply = totalSupply();
         uint256 totalAssets_ = totalAssets();
 
@@ -359,18 +314,14 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
     /**
      * @notice Preview deposit - central logic for deposits
      */
-    function previewDeposit(
-        uint256 assets
-    ) public view override returns (uint256) {
+    function previewDeposit(uint256 assets) public view override returns (uint256) {
         return _convertToShares(assets, Math.Rounding.Floor);
     }
 
     /**
      * @notice Preview redeem - central logic for redemptions
      */
-    function previewRedeem(
-        uint256 shares
-    ) public view override returns (uint256) {
+    function previewRedeem(uint256 shares) public view override returns (uint256) {
         return _convertToAssets(shares, Math.Rounding.Floor);
     }
 
@@ -386,9 +337,7 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
     /**
      * @notice Preview mint - disabled, returns 0
      */
-    function previewMint(
-        uint256 /* shares */
-    ) public pure override returns (uint256) {
+    function previewMint(uint256 /* shares */ ) public pure override returns (uint256) {
         return 0; // Mint is disabled
     }
 
@@ -397,27 +346,21 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
     /**
      * @notice Get maximum deposit amount
      */
-    function maxDeposit(
-        address /* receiver */
-    ) public view override returns (uint256) {
+    function maxDeposit(address /* receiver */ ) public view override returns (uint256) {
         return paused() ? 0 : type(uint256).max;
     }
 
     /**
      * @notice Minting is disabled
      */
-    function maxMint(
-        address /* receiver */
-    ) public pure override returns (uint256) {
+    function maxMint(address /* receiver */ ) public pure override returns (uint256) {
         return 0;
     }
 
     /**
      * @notice Maximum withdrawal is disabled
      */
-    function maxWithdraw(
-        address /* owner */
-    ) public pure override returns (uint256) {
+    function maxWithdraw(address /* owner */ ) public pure override returns (uint256) {
         return 0; // Withdraw is disabled
     }
 
@@ -431,34 +374,21 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
         uint256 ownerShares = balanceOf(owner);
         if (ownerShares == 0) return 0;
 
-        uint256 maxSharesFromLiquidity = _convertToShares(
-            _getAvailableLiquidity(),
-            Math.Rounding.Floor
-        );
+        uint256 maxSharesFromLiquidity = _convertToShares(_getAvailableLiquidity(), Math.Rounding.Floor);
 
         // Inline min calculation
-        return
-            ownerShares > maxSharesFromLiquidity
-                ? maxSharesFromLiquidity
-                : ownerShares;
+        return ownerShares > maxSharesFromLiquidity ? maxSharesFromLiquidity : ownerShares;
     }
 
     /**
      * @notice Get available liquidity from underlying Morpho vault
      */
     function _getAvailableLiquidity() internal view returns (uint256) {
-        uint256 ourMorphoShares = IERC20(address(morphoVault)).balanceOf(
-            address(this)
-        );
+        uint256 ourMorphoShares = IERC20(address(morphoVault)).balanceOf(address(this));
         uint256 maxMorphoRedeem = morphoVault.maxRedeem(address(this));
 
         // Inline the min calculation to save gas
-        return
-            morphoVault.convertToAssets(
-                ourMorphoShares > maxMorphoRedeem
-                    ? maxMorphoRedeem
-                    : ourMorphoShares
-            );
+        return morphoVault.convertToAssets(ourMorphoShares > maxMorphoRedeem ? maxMorphoRedeem : ourMorphoShares);
     }
 
     // ========== DISABLED FUNCTIONS ==========
@@ -491,13 +421,9 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
      * @return Whether the slippage is within tolerance
      * @dev Useful for frontend pre-checks
      */
-    function isSlippageAcceptable(
-        uint256 expected,
-        uint256 actual
-    ) external pure returns (bool) {
+    function isSlippageAcceptable(uint256 expected, uint256 actual) external pure returns (bool) {
         if (expected == 0) return actual == 0;
-        uint256 minAcceptable = (expected * BASIS_POINTS_MINUS_SLIPPAGE) /
-            BASIS_POINTS;
+        uint256 minAcceptable = (expected * BASIS_POINTS_MINUS_SLIPPAGE) / BASIS_POINTS;
         return actual >= minAcceptable;
     }
 
@@ -528,10 +454,7 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
      * @param receiver The address to receive the assets
      * @return assets The amount of assets received
      */
-    function emergencyWithdraw(
-        uint256 shares,
-        address receiver
-    ) external nonReentrant returns (uint256 assets) {
+    function emergencyWithdraw(uint256 shares, address receiver) external nonReentrant returns (uint256 assets) {
         if (shares == 0) return 0;
 
         uint256 userBalance = balanceOf(msg.sender);
@@ -547,9 +470,7 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
         }
 
         // Try Morpho redemption first WITHOUT burning shares
-        try
-            morphoVault.redeem(morphoSharesToRedeem, receiver, address(this))
-        returns (uint256 receivedAssets) {
+        try morphoVault.redeem(morphoSharesToRedeem, receiver, address(this)) returns (uint256 receivedAssets) {
             // Success: burn shares and return assets
             _burn(msg.sender, shares);
             assets = receivedAssets;
@@ -605,9 +526,7 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
      * @dev Brings all funds back to the contract for emergency withdrawals
      */
     function emergencyWithdrawFromMorpho() external onlyOwner {
-        uint256 morphoShares = IERC20(address(morphoVault)).balanceOf(
-            address(this)
-        );
+        uint256 morphoShares = IERC20(address(morphoVault)).balanceOf(address(this));
         if (morphoShares > 0) {
             morphoVault.redeem(morphoShares, address(this), address(this));
         }

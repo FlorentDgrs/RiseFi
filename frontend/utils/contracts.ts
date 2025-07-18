@@ -1,22 +1,22 @@
-// Configuration des contrats pour le frontend RiseFi
-// Adresses des contrats sur le fork Base local
+// Contract configuration for RiseFi frontend
+// Contract addresses on local Base fork
 
 import { RISEFI_VAULT_ABI } from "./generated-abi";
 
 export const CONTRACTS = {
   USDC: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-  RISEFI_VAULT: "0x2c90F2f1A1fE7279C0321787A93015bF116Dc36A",
+  RISEFI_VAULT: "0x2c90f2f1a1fe7279c0321787a93015bf116dc36a",
 } as const;
 
-// Configuration réseau
+// Network configuration
 export const NETWORK_CONFIG = {
-  CHAIN_ID: 31337, // Anvil local (fork de Base)
+  CHAIN_ID: 31337, // Anvil local (Base fork)
   RPC_URL: "http://localhost:8545",
-  BLOCK_EXPLORER: "https://basescan.org", // Pour référence
+  BLOCK_EXPLORER: "https://basescan.org", // For reference
   FORK_BLOCK: 32778110,
 } as const;
 
-// Wallets de test Anvil (avec leurs clés privées)
+// Anvil test wallets (with their private keys)
 export const TEST_WALLETS = {
   WALLET_1: {
     address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
@@ -35,9 +35,9 @@ export const TEST_WALLETS = {
   },
 } as const;
 
-// ABIs - Maintenant utilise l'ABI généré automatiquement
+// ABIs - Now uses automatically generated ABI
 export const ABIS = {
-  // ABI ERC20 minimal pour USDC
+  // Minimal ERC20 ABI for USDC
   ERC20: [
     {
       name: "allowance",
@@ -78,22 +78,20 @@ export const ABIS = {
     },
   ] as const,
 
-  // ABI RiseFi Vault - Maintenant généré automatiquement depuis le contrat
+  // RiseFi Vault ABI - Now automatically generated from the contract
   RISEFI_VAULT: RISEFI_VAULT_ABI,
 } as const;
 
-// Helper pour mettre à jour l'adresse du vault RiseFi après déploiement
+// Helper to update RiseFi vault address after deployment
 export const updateRiseFiVaultAddress = (address: string) => {
-  // Cette fonction sera utilisée pour mettre à jour l'adresse après déploiement
-  // En production, cela devrait être géré par des variables d'environnement
-  console.log("RiseFi Vault deployed at:", address);
+  // This function will be used to update the address after deployment
+  // In production, this should be handled by environment variables
   return address;
 };
 
-// Constantes utiles
+// Useful constants
 export const CONSTANTS = {
   USDC_DECIMALS: 6,
   VAULT_SHARES_DECIMALS: 18,
-  MIN_DEPOSIT_USDC: 1, // 1 USDC minimum
-  FUNDING_AMOUNT: 10000, // 10,000 USDC par wallet de test
+  FUNDING_AMOUNT: 10000, // 10,000 USDC per test wallet
 } as const;

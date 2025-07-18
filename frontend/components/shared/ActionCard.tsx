@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   useAccount,
+  useReadContract,
   useWriteContract,
   useWaitForTransactionReceipt,
-  useReadContract,
 } from "wagmi";
 import { parseUnits } from "viem";
 import { ABIS, CONTRACTS, CONSTANTS } from "@/utils/contracts";
+import { toast } from "sonner";
+import React from "react";
 
 interface ActionCardProps {
   usdcBalanceStr: string;
@@ -22,7 +24,79 @@ const VAULT_ABI = ABIS.RISEFI_VAULT;
 const USDC_ADDRESS = CONTRACTS.USDC;
 const USDC_ABI = ABIS.ERC20;
 
-export default function ActionCard({
+// Custom toast functions with elegant styling and colored borders
+const showSuccessToast = (message: string, description?: string) => {
+  toast.success(message, {
+    description,
+    duration: 4000,
+    style: {
+      background: "#1f2937", // Solid gray-800
+      color: "#f9fafb", // Solid gray-50
+      border: "1px solid #4b5563", // Solid gray-600
+      borderLeft: "4px solid hsl(142 76% 36%)",
+      borderRadius: "var(--radius)",
+      backdropFilter: "blur(8px)",
+      fontWeight: "500",
+      boxShadow: "0 4px 12px -2px rgba(0, 0, 0, 0.1)",
+    },
+  });
+};
+
+const showErrorToast = (message: string, description?: string) => {
+  toast.error(message, {
+    description,
+    duration: 6000,
+    style: {
+      background: "#1f2937", // Solid gray-800
+      color: "#f9fafb", // Solid gray-50
+      border: "1px solid #4b5563", // Solid gray-600
+      borderLeft: "4px solid #ef4444", // Solid red-500
+      borderRadius: "var(--radius)",
+      backdropFilter: "blur(8px)",
+      fontWeight: "500",
+      boxShadow: "0 4px 12px -2px rgba(0, 0, 0, 0.1)",
+    },
+  });
+};
+
+const showInfoToast = (message: string, description?: string) => {
+  toast.info(message, {
+    description,
+    duration: 3000,
+    style: {
+      background: "#1f2937", // Solid gray-800
+      color: "#f9fafb", // Solid gray-50
+      border: "1px solid #4b5563", // Solid gray-600
+      borderLeft: "4px solid #f5c249", // Solid RiseFi yellow
+      borderRadius: "var(--radius)",
+      backdropFilter: "blur(8px)",
+      fontWeight: "500",
+      boxShadow: "0 4px 12px -2px rgba(0, 0, 0, 0.1)",
+    },
+  });
+};
+
+const showLoadingToast = (message: string, description?: string) => {
+  return toast.loading(message, {
+    description,
+    duration: Infinity, // Toast stays until manually closed
+    closeButton: true, // Add close button
+    style: {
+      background: "#1f2937", // Solid gray-800
+      color: "#f9fafb", // Solid gray-50
+      border: "1px solid #4b5563", // Solid gray-600
+      borderLeft: "4px solid #9ca3af", // Solid gray-400
+      borderRadius: "var(--radius)",
+      backdropFilter: "blur(8px)",
+      fontWeight: "500",
+      boxShadow: "0 4px 12px -2px rgba(0, 0, 0, 0.1)",
+      cursor: "pointer", // Indicates it's clickable
+    },
+  });
+};
+
+// Memoized component to prevent unnecessary re-renders
+const ActionCard = React.memo(function ActionCard({
   usdcBalanceStr,
   maxWithdrawStr,
   investedAmountStr,
@@ -35,163 +109,28 @@ export default function ActionCard({
   const [status, setStatus] = useState<
     "idle" | "approving" | "depositing" | "withdrawing" | "done" | "error"
   >("idle");
-  const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>(undefined);
+  const [currentToastId, setCurrentToastId] = useState<string | number | null>(
+    null
+  );
 
-  // Éviter l'erreur d'hydration
+  // Avoid hydration error
   useEffect(() => {
     setMounted(true);
   }, []);
 
   // Write hooks
-  const { writeContract: writeApprove } = useWriteContract();
-  const { writeContract: writeDeposit } = useWriteContract();
-  const { writeContract: writeRedeem } = useWriteContract();
+  const { writeContractAsync: writeApproveAsync } = useWriteContract();
+  const { writeContractAsync: writeDepositAsync } = useWriteContract();
+  const { writeContractAsync: writeRedeemAsync } = useWriteContract();
 
-  // Suivi de la confirmation (pour withdraw et deposit)
-  const {
-    isLoading: isConfirming,
-    isSuccess,
-    error: errorConfirmation,
-  } = useWaitForTransactionReceipt({
-    // @ts-ignore - txHash peut être undefined mais query.enabled le gère
+  // Transaction confirmation tracking (for withdraw and deposit)
+  const { isSuccess, error: errorConfirmation } = useWaitForTransactionReceipt({
     hash: txHash,
     query: { enabled: !!txHash },
   });
 
-  // Rafraîchir les stats et reset l'input après succès
-  useEffect(() => {
-    if (isSuccess) {
-      console.log("Transaction successful, refetching stats...");
-      refetchStats();
-      setAmount("");
-      setStatus("done");
-      setTxHash(undefined); // Reset txHash
-    }
-  }, [isSuccess, refetchStats]);
-
-  // Gérer les erreurs de confirmation
-  useEffect(() => {
-    if (errorConfirmation) {
-      setStatus("error");
-      setError(
-        `Transaction failed: ${
-          (errorConfirmation as any).shortMessage || errorConfirmation.message
-        }`
-      );
-      setTxHash(undefined); // Reset txHash
-    }
-  }, [errorConfirmation]);
-
-  // Handler principal
-  const handleAction = async () => {
-    setError(null);
-    setStatus("idle");
-    if (!address || !amount || isNaN(Number(amount)) || Number(amount) <= 0) {
-      setError("Please enter a valid positive number");
-      return;
-    }
-
-    // Validation des minimums
-    const amountNum = Number(amount);
-    if (tab === "deposit" && amountNum <= 1) {
-      setError("Minimum deposit is > 1 USDC");
-      return;
-    }
-
-    // Pour les retraits, on vérifie qu'il y a strictement plus de 0.001 USDC (pour éviter les dust amounts)
-    if (tab === "withdraw" && amountNum <= 0.001) {
-      setError("Minimum withdrawal is > 0.001 USDC");
-      return;
-    }
-
-    const amountBN = parseUnits(amount, CONSTANTS.USDC_DECIMALS);
-    if (tab === "deposit") {
-      // Dépôt avec auto-approve si nécessaire
-      const safeAllowance =
-        typeof allowance === "bigint" ? allowance : BigInt(0);
-      try {
-        if (safeAllowance < amountBN) {
-          setStatus("approving");
-          await writeApprove({
-            address: USDC_ADDRESS,
-            abi: USDC_ABI,
-            functionName: "approve",
-            args: [VAULT_ADDRESS, amountBN],
-          });
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-          await refetchAllowance?.();
-        }
-        setStatus("depositing");
-        const tx = await writeDeposit({
-          address: VAULT_ADDRESS,
-          abi: VAULT_ABI,
-          functionName: "deposit",
-          args: [amountBN, address],
-        });
-        setTxHash(typeof tx === "string" ? (tx as `0x${string}`) : undefined);
-        console.log("Deposit transaction sent:", tx);
-        // On attend la confirmation via useWaitForTransactionReceipt
-      } catch (e: any) {
-        console.error("Deposit error:", e);
-        setStatus("error");
-        setError(e?.message || "Error during deposit");
-        setTxHash(undefined);
-      }
-    } else {
-      // Retrait - utilise redeem() au lieu de withdraw()
-      try {
-        setStatus("withdrawing");
-        const tx = await writeRedeem({
-          address: VAULT_ADDRESS,
-          abi: VAULT_ABI,
-          functionName: "redeem",
-          args: [amountBN, address, address],
-        });
-        setTxHash(typeof tx === "string" ? (tx as `0x${string}`) : undefined);
-        console.log("Redeem transaction sent:", tx);
-        // On attend la confirmation via useWaitForTransactionReceipt
-      } catch (e: any) {
-        console.error("Redeem error:", e);
-        setStatus("error");
-        setError(e?.message || "Error during withdrawal");
-        setTxHash(undefined);
-      }
-    }
-  };
-
-  // Rafraîchir les stats et reset l'input après succès
-  useEffect(() => {
-    if (isSuccess) {
-      refetchStats();
-      setAmount("");
-      setStatus("done");
-      setTxHash(undefined);
-    }
-  }, [isSuccess, refetchStats]);
-
-  // Functions to handle MAX button
-  const handleMaxDeposit = () => {
-    const balance = parseFloat(usdcBalanceStr);
-    if (!isNaN(balance) && balance > 0) {
-      // Tronquer à 2 décimales pour éviter les erreurs de slippage
-      const roundedAmount = Math.floor(balance * 100) / 100;
-      setAmount(roundedAmount.toFixed(2));
-    }
-  };
-
-  const handleMaxWithdraw = () => {
-    const maxWithdraw = parseFloat(maxWithdrawStr);
-    if (!isNaN(maxWithdraw) && maxWithdraw > 0) {
-      // Tronquer à 2 décimales pour éviter les erreurs de slippage
-      const roundedAmount = Math.floor(maxWithdraw * 100) / 100;
-      setAmount(roundedAmount.toFixed(2));
-    } else {
-      setError(`Cannot withdraw: maxWithdraw is ${maxWithdrawStr}`);
-    }
-  };
-
-  // Allowance (pour dépôt)
+  // Allowance (for deposit)
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
     address: USDC_ADDRESS,
     abi: USDC_ABI,
@@ -200,23 +139,277 @@ export default function ActionCard({
     query: { enabled: !!address && tab === "deposit" },
   });
 
+  // Success/error handling with improved toasts
+  useEffect(() => {
+    if (isSuccess) {
+      // Dismiss loading toast
+      if (currentToastId) {
+        toast.dismiss(currentToastId);
+        setCurrentToastId(null);
+      }
+
+      // Show success toast - ONLY final confirmation is green
+      const successMessage =
+        tab === "deposit" ? "Deposit confirmed" : "Withdrawal confirmed";
+      const successDescription =
+        tab === "deposit"
+          ? `${amount} USDC have been successfully deposited into the vault`
+          : `${amount} USDC have been successfully withdrawn from the vault`;
+
+      showSuccessToast(successMessage, successDescription);
+
+      setAmount("");
+      setStatus("done");
+      setTxHash(undefined);
+      refetchAllowance?.();
+
+      // Delay before refetch
+      setTimeout(() => {
+        refetchStats();
+      }, 2000);
+
+      // Visual reset after 3s
+      setTimeout(() => {
+        setStatus("idle");
+      }, 3000);
+    }
+
+    if (errorConfirmation) {
+      // Dismiss loading toast
+      if (currentToastId) {
+        toast.dismiss(currentToastId);
+        setCurrentToastId(null);
+      }
+
+      const errorMsg = "Transaction failed";
+      const errorDescription =
+        "The transaction was rejected or failed on the blockchain. Check your balance and try again.";
+
+      showErrorToast(errorMsg, errorDescription);
+      setStatus("error");
+      setTxHash(undefined);
+
+      // Visual reset after 5s
+      setTimeout(() => {
+        setStatus("idle");
+      }, 5000);
+    }
+  }, [
+    isSuccess,
+    errorConfirmation,
+    tab,
+    refetchStats,
+    refetchAllowance,
+    amount,
+    currentToastId,
+  ]);
+
+  // Reset status if user modifies input
+  useEffect(() => {
+    if (status === "error" || status === "done") {
+      setStatus("idle");
+    }
+  }, [amount, status]);
+
+  // Optimized MAX handlers
+  const handleMaxDeposit = useCallback(() => {
+    setAmount(usdcBalanceStr);
+    showInfoToast("Maximum amount selected", `${usdcBalanceStr} USDC`);
+  }, [usdcBalanceStr]);
+
+  const handleMaxWithdraw = useCallback(() => {
+    setAmount(maxWithdrawStr);
+    showInfoToast("Maximum amount selected", `${maxWithdrawStr} USDC`);
+  }, [maxWithdrawStr]);
+
+  // Handler principal
+  const handleAction = async () => {
+    setStatus("idle");
+
+    // Basic validation
+    if (!address) {
+      showErrorToast(
+        "Wallet not connected",
+        "Please connect your wallet to continue"
+      );
+      return;
+    }
+
+    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+      showErrorToast(
+        "Invalid amount",
+        "Please enter a valid amount greater than 0"
+      );
+      return;
+    }
+
+    const amountBN = parseUnits(amount, CONSTANTS.USDC_DECIMALS);
+
+    if (tab === "deposit") {
+      // Deposit with auto-approve if needed
+      const safeAllowance =
+        typeof allowance === "bigint" ? allowance : BigInt(0);
+
+      try {
+        if (safeAllowance < amountBN) {
+          setStatus("approving");
+
+          const approveToastId = showLoadingToast(
+            "Approval required",
+            "Please sign the USDC approval in your wallet"
+          );
+          setCurrentToastId(approveToastId);
+
+          await writeApproveAsync({
+            address: USDC_ADDRESS,
+            abi: USDC_ABI,
+            functionName: "approve",
+            args: [VAULT_ADDRESS, amountBN],
+            gas: BigInt(100000),
+          });
+
+          refetchAllowance?.();
+
+          // Update toast for deposit
+          toast.dismiss(approveToastId);
+          const depositToastId = showLoadingToast(
+            "Deposit in progress",
+            `Depositing ${amount} USDC into the vault...`
+          );
+          setCurrentToastId(depositToastId);
+        } else {
+          setStatus("depositing");
+
+          const depositToastId = showLoadingToast(
+            "Deposit in progress",
+            `Depositing ${amount} USDC into the vault...`
+          );
+          setCurrentToastId(depositToastId);
+        }
+
+        const tx = await writeDepositAsync({
+          address: VAULT_ADDRESS,
+          abi: VAULT_ABI,
+          functionName: "deposit",
+          args: [amountBN, address],
+          gas: BigInt(500000),
+        });
+
+        setTxHash(tx as `0x${string}`);
+
+        // Update toast to show transaction sent
+        toast.dismiss(currentToastId!);
+        const confirmToastId = showLoadingToast(
+          "Transaction sent",
+          "Waiting for blockchain confirmation..."
+        );
+        setCurrentToastId(confirmToastId);
+      } catch (e: unknown) {
+        // Dismiss any loading toast
+        if (currentToastId) {
+          toast.dismiss(currentToastId);
+          setCurrentToastId(null);
+        }
+
+        setStatus("error");
+        setTxHash(undefined);
+
+        // Different message based on error type
+        const errorMessage = e instanceof Error ? e.message : String(e);
+        if (
+          errorMessage.includes("User rejected") ||
+          errorMessage.includes("User denied")
+        ) {
+          // Replace loading toast with cancellation toast
+          showErrorToast(
+            "Transaction cancelled",
+            "You cancelled the transaction"
+          );
+        } else {
+          showErrorToast(
+            "Oops! Something went wrong",
+            "Please try again later"
+          );
+        }
+      }
+    } else {
+      // Withdrawal
+      try {
+        setStatus("withdrawing");
+
+        const withdrawToastId = showLoadingToast(
+          "Withdrawal in progress",
+          `Withdrawing ${amount} USDC from the vault...`
+        );
+        setCurrentToastId(withdrawToastId);
+
+        const tx = await writeRedeemAsync({
+          address: VAULT_ADDRESS,
+          abi: VAULT_ABI,
+          functionName: "redeem",
+          args: [amountBN, address, address],
+          gas: BigInt(500000),
+        });
+
+        setTxHash(tx as `0x${string}`);
+
+        // Update toast to show transaction sent
+        toast.dismiss(withdrawToastId);
+        const confirmToastId = showLoadingToast(
+          "Transaction sent",
+          "Waiting for blockchain confirmation..."
+        );
+        setCurrentToastId(confirmToastId);
+      } catch (e: unknown) {
+        // Dismiss any loading toast
+        if (currentToastId) {
+          toast.dismiss(currentToastId);
+          setCurrentToastId(null);
+        }
+
+        setStatus("error");
+        setTxHash(undefined);
+
+        // Different message based on error type
+        const errorMessage = e instanceof Error ? e.message : String(e);
+        if (
+          errorMessage.includes("User rejected") ||
+          errorMessage.includes("User denied")
+        ) {
+          // Replace loading toast with cancellation toast
+          showErrorToast(
+            "Transaction cancelled",
+            "You cancelled the transaction"
+          );
+        } else {
+          showErrorToast(
+            "Oops! Something went wrong",
+            "Please try again later"
+          );
+        }
+      }
+    }
+  };
+
+  // Determine if button is loading
   const isLoading =
     status === "approving" ||
     status === "depositing" ||
-    status === "withdrawing" ||
-    !!isConfirming;
+    status === "withdrawing";
 
-  // Reset status to idle after a delay if done
+  // Clean up toasts if user changes tab or modifies input during action
   useEffect(() => {
-    if (status === "done") {
-      const timer = setTimeout(() => {
-        setStatus("idle");
-      }, 3000); // Reset after 3 seconds
-      return () => clearTimeout(timer);
+    if (isLoading && currentToastId) {
+      // If user changes something during loading, close the toast
+      toast.dismiss(currentToastId);
+      setCurrentToastId(null);
+      setStatus("idle");
     }
-  }, [status]);
+  }, [tab, amount, isLoading, currentToastId]);
 
   // UI
+  if (!mounted) return null;
+
   return (
     <div className="w-full max-w-sm mx-auto p-6 rounded-2xl bg-gray-900/90 border border-[#f5c249] shadow-xl">
       {/* Tabs */}
@@ -230,7 +423,7 @@ export default function ActionCard({
             }
           `}
           onClick={() => setTab("deposit")}
-          disabled={!mounted || isLoading}
+          disabled={isLoading}
         >
           Deposit
         </button>
@@ -243,11 +436,12 @@ export default function ActionCard({
             }
           `}
           onClick={() => setTab("withdraw")}
-          disabled={!mounted || isLoading}
+          disabled={isLoading}
         >
           Withdraw
         </button>
       </div>
+
       {/* Input */}
       <div className="flex flex-col gap-3">
         <label htmlFor="actionAmount" className="text-sm text-gray-300">
@@ -258,130 +452,64 @@ export default function ActionCard({
             id="actionAmount"
             type="number"
             step="any"
-            min={tab === "deposit" ? "1.000001" : "0.001001"}
             placeholder="100"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            disabled={!mounted || !address || isLoading}
+            disabled={!address || isLoading}
             className="flex-1 bg-gray-900 text-white border border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:border-[#f5c249] transition font-mono [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
           <button
             type="button"
             onClick={tab === "deposit" ? handleMaxDeposit : handleMaxWithdraw}
-            disabled={!mounted || !address || isLoading}
+            disabled={!address || isLoading}
             className="bg-gray-700 hover:bg-gray-600 text-[#f5c249] font-bold py-2 px-3 rounded-lg transition duration-200 disabled:opacity-50"
           >
             MAX
           </button>
         </div>
-        {/* Contextual info */}
+
+        {/* Contextual info - SIMPLIFIED */}
         <div className="flex flex-col gap-1 text-xs text-gray-400 font-mono">
           {tab === "deposit" ? (
             <span>
-              USDC balance:{" "}
-              <span className="text-[#f5c249]">
-                {Number(usdcBalanceStr).toFixed(2)}
-              </span>
-              <span className="block text-gray-500">Min: &gt; 1 USDC</span>
+              USDC Balance:{" "}
+              <span className="text-[#f5c249]">{usdcBalanceStr}</span>
             </span>
           ) : (
             <span>
-              Max withdraw:{" "}
-              <span className="text-[#f5c249]">
-                {Number(maxWithdrawStr).toFixed(2)}
-              </span>
-              <span className="block text-gray-500">Min: &gt; 0.001 USDC</span>
+              Max withdrawal:{" "}
+              <span className="text-[#f5c249]">{maxWithdrawStr}</span>
             </span>
           )}
-          {/* Affichage du montant investi si disponible */}
-          {typeof investedAmountStr !== "undefined" && (
+          {/* Display invested amount if available */}
+          {investedAmountStr && (
             <span>
               Invested:{" "}
-              <span className="text-[#f5c249]">
-                {Number(investedAmountStr).toFixed(2)} USDC
-              </span>
+              <span className="text-[#f5c249]">{investedAmountStr} USDC</span>
             </span>
           )}
         </div>
+
         {/* Dynamic button */}
         <button
           onClick={handleAction}
-          disabled={
-            !mounted ||
-            !address ||
-            !amount ||
-            isLoading ||
-            (tab === "deposit" &&
-              (Number(amount) <= 1 ||
-                Number(amount) > parseFloat(usdcBalanceStr))) ||
-            (tab === "withdraw" &&
-              (Number(amount) <= 0.001 ||
-                Number(amount) > parseFloat(maxWithdrawStr)))
-          }
-          className={`font-bold py-2 rounded-xl transition disabled:opacity-50 mt-2
-            ${
-              tab === "deposit"
-                ? "bg-[#f5c249] hover:bg-[#e6b142] text-gray-900"
-                : "bg-[#f5c249] hover:bg-[#e6b142] text-gray-900"
-            }
-          `}
+          disabled={!address || isLoading}
+          className="w-full bg-[#f5c249] hover:bg-[#e6b142] text-gray-900 font-bold py-3 px-4 rounded-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
-          {status === "approving" ? (
-            "Approving..."
-          ) : status === "depositing" ? (
-            "Depositing..."
-          ) : status === "withdrawing" ? (
-            "Withdrawing..."
-          ) : isConfirming ? (
-            <span className="flex items-center gap-2 justify-center">
-              <svg
-                className="animate-spin h-4 w-4 text-[#f5c249]"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                  fill="none"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8v8z"
-                />
-              </svg>
-              Waiting for confirmation...
-            </span>
-          ) : tab === "deposit" ? (
-            "Deposit"
+          {isLoading ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+              {status === "approving" && "Approving..."}
+              {status === "depositing" && "Depositing..."}
+              {status === "withdrawing" && "Withdrawing..."}
+            </>
           ) : (
-            "Withdraw"
+            <span>{tab === "deposit" ? "Deposit" : "Withdraw"}</span>
           )}
         </button>
-        {/* Transaction feedback */}
-        {txHash && (
-          <div className="text-xs text-gray-400 break-all">Tx: {txHash}</div>
-        )}
-        {/* Error/success feedback */}
-        {error && (
-          <div className="text-red-400 text-sm font-medium">{error}</div>
-        )}
-        {isSuccess && status === "done" && !error && (
-          <div className="text-green-400 text-sm font-medium">
-            {tab === "deposit" ? "Deposit successful!" : "Withdraw successful!"}
-          </div>
-        )}
-        {errorConfirmation && (
-          <div className="text-red-400 text-sm font-medium">
-            Transaction failed:{" "}
-            {(errorConfirmation as any).shortMessage ||
-              errorConfirmation.message}
-          </div>
-        )}
       </div>
     </div>
   );
-}
+});
+
+export default ActionCard;

@@ -4,56 +4,79 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.27-blue.svg)](https://docs.soliditylang.org/)
 [![Foundry](https://img.shields.io/badge/Built%20with-Foundry-FFDB1C.svg)](https://getfoundry.sh/)
+[![Next.js](https://img.shields.io/badge/Frontend-Next.js-black.svg)](https://nextjs.org/)
 
-**RiseFi** is a DeFi yield optimization protocol featuring ERC-4626 vaults with **Morpho Blue integration** on the Base network. Built with security-first principles and comprehensive testing.
+**RiseFi** is a DeFi yield optimization protocol featuring ERC-4626 vaults with **Morpho Blue integration** on the Base network. Built with security-first principles, comprehensive testing, and a modern React frontend.
 
 ## ✨ Features
 
-- **🔒 ERC-4626 Compliant Vaults** — Standard vault interface with 6-decimal USDC support
-- **🌊 Morpho Blue Integration** — Direct integration with Morpho vaults for enhanced yields
-- **🛡️ Inflation Attack Protection** — Dead shares mechanism prevents inflation attacks
-- **⚡ Gas Optimized** — Professional gas optimization patterns and efficient operations
-- **🧪 Comprehensive Testing** — 35 tests including unit, integration, and fork testing
-- **🔍 Security Analysis** — Automated Slither security scanning and best practices
-- **📊 Professional Documentation** — Complete NatSpec documentation in English
+- **ERC-4626 Compliant Vaults** — Standard vault interface with 6-decimal USDC support
+- **Morpho Blue Integration** — Direct integration with Morpho vaults for enhanced yields
+- **Inflation Attack Protection** — Dead shares mechanism prevents inflation attacks
+- **Gas Optimized** — Professional gas optimization patterns and efficient operations
+- **Comprehensive Testing** — 86+ tests including unit, integration, and fork testing
+- **Security Analysis** — Automated Slither security scanning and best practices
+- **Professional Documentation** — Complete NatSpec documentation in English
+- **Modern Frontend** — React/Next.js with Tailwind CSS and Wagmi integration
+- **Automated Deployment** — One-command deployment with funding scripts
 
 ## 🚀 Quick Start
 
 ```bash
 # Clone and install
 git clone https://github.com/FlorentDgrs/RiseFiV3.git
-cd RiseFiV3/RiseFi
-forge install
+cd RiseFiV3
 
-# Build and test
-forge build
-forge test --gas-report
+# Deploy backend (Anvil + Contracts + Funding)
+cd RiseFi && ./scripts/deploy-complete.sh
+
+# Start frontend
+cd ../frontend && npm install && npm run dev
+
+# Access application
+# Frontend: http://localhost:3000/dashboard
+# Anvil: http://localhost:8545
 ```
 
 ## 🏗️ Architecture
 
 ```
-RiseFi/
-├── src/
-│   ├── RiseFiVault.sol        # ERC-4626 vault with Morpho integration
-│   └── interfaces/            # Contract interfaces
-├── test/
-│   ├── RiseFiVaultFork.t.sol # Comprehensive fork tests (35 tests)
-│   └── unit/                  # Unit tests
-└── scripts/                   # Deployment scripts
+RiseFiV3/
+├── RiseFi/                    # Smart contracts (Foundry)
+│   ├── src/
+│   │   └── RiseFiVault.sol    # ERC-4626 vault with Morpho integration
+│   ├── test/
+│   │   └── RiseFiVaultOptimized.t.sol # Comprehensive tests (86+ tests)
+│   ├── scripts/
+│   │   ├── deploy-complete.sh # Automated deployment
+│   │   └── stop-all.sh        # Service management
+│   └── script/
+│       ├── DeployVault.s.sol  # Contract deployment
+│       └── FundTestWallets.s.sol # Test wallet funding
+└── frontend/                  # React/Next.js application
+    ├── app/
+    │   ├── dashboard/         # Main dashboard
+    │   ├── admin/             # Admin panel
+    │   └── academy/           # Educational content
+    ├── components/
+    │   └── shared/            # Reusable components
+    └── utils/                 # Contract utilities
 ```
 
 ## 🧪 Testing
 
 ```bash
 # All tests with gas report
-forge test --gas-report
+cd RiseFi && forge test --gas-report
 
 # Fork tests (requires Base RPC)
-forge test --match-contract "Fork" --fork-url https://mainnet.base.org --fork-block-number 32778110
+forge test --match-contract "Optimized" --fork-url https://mainnet.base.org --fork-block-number 32778110
 
-# Unit tests only
-forge test --no-match-contract "Fork" --gas-report
+# Coverage report
+forge coverage --ignore script/
+
+# Frontend tests
+cd ../frontend && npm run check
 ```
 
 ## 🔧 Smart Contracts
@@ -79,8 +102,8 @@ forge test --no-match-contract "Fork" --gas-report
 ## 📊 Test Results
 
 ```
-Ran 35 tests for test/RiseFiVaultFork.t.sol:RiseFiVaultForkTest
-✅ 35 passed; 0 failed; 0 skipped
+Ran 86+ tests for test/RiseFiVaultOptimized.t.sol:RiseFiVaultOptimizedTest
+✅ All tests passed; 0 failed; 0 skipped
 ```
 
 ### Test Coverage
@@ -89,6 +112,7 @@ Ran 35 tests for test/RiseFiVaultFork.t.sol:RiseFiVaultForkTest
 - **Fork Tests**: Real integration with Morpho vaults on Base
 - **Fuzz Tests**: Property-based testing for robustness
 - **Gas Optimization**: Comprehensive gas reporting
+- **Frontend Tests**: TypeScript checking and linting
 
 ## 🔐 Security
 
@@ -103,31 +127,33 @@ Ran 35 tests for test/RiseFiVaultFork.t.sol:RiseFiVaultForkTest
 ### Prerequisites
 
 - [Foundry](https://getfoundry.sh/) installed
+- [Node.js](https://nodejs.org/) and npm for frontend
 - Base network RPC access for fork testing
 
 ### Commands
 
 ```bash
-# Build contracts
+# Backend (RiseFi/)
 forge build
-
-# Run tests
 forge test --gas-report
-
-# Format code
 forge fmt
-
-# Security analysis
 slither .
 
-# Deploy (when ready)
-forge script script/Deploy.s.sol --rpc-url base_mainnet --broadcast --verify
+# Frontend (frontend/)
+npm run dev
+npm run build
+npm run check
+
+# Full stack deployment
+cd RiseFi && ./scripts/deploy-complete.sh
+cd ../frontend && npm run dev
 ```
 
 ## 📚 Documentation
 
-- **Contract Documentation**: Complete NatSpec documentation
-- **Test Documentation**: Comprehensive test explanations
+- **Contract Documentation**: Complete NatSpec documentation in `RiseFi/src/`
+- **Test Documentation**: Comprehensive test explanations in `RiseFi/test/`
+- **Frontend Documentation**: Component documentation in `frontend/README.md`
 - **Integration Guide**: Morpho Blue integration details
 - **Security Analysis**: Detailed security considerations
 

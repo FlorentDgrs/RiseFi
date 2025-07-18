@@ -1,6 +1,6 @@
 import { Chain } from "viem";
 
-// Configuration du réseau Anvil local (développement)
+// Anvil local network configuration (development)
 export const anvilChain: Chain = {
   id: 31337, // Anvil local standard
   name: "Anvil Local",
@@ -26,7 +26,7 @@ export const anvilChain: Chain = {
   testnet: true,
 };
 
-// Configuration du réseau Base mainnet (production)
+// Base mainnet network configuration (production)
 export const baseChain: Chain = {
   id: 8453,
   name: "Base",
@@ -52,13 +52,13 @@ export const baseChain: Chain = {
   testnet: false,
 };
 
-// Configuration pour différents environnements
+// Configuration for different environments
 export const getChains = () => {
-  // En développement, utiliser Anvil
+  // In development, use Anvil
   if (process.env.NODE_ENV === "development") {
     return [anvilChain];
   }
 
-  // En production, utiliser Base mainnet
+  // In production, use Base mainnet
   return [baseChain];
 };

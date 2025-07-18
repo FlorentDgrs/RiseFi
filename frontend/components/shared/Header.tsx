@@ -3,15 +3,33 @@ import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAccount } from "wagmi";
+import { useAccount, useReadContract } from "wagmi";
+import { ABIS, CONTRACTS } from "@/utils/contracts";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
   const pathname = usePathname();
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
 
-  // Éviter l'erreur d'hydration en attendant le mount côté client
+  // Read owner to check if current user is admin
+  const { data: owner } = useReadContract({
+    address: CONTRACTS.RISEFI_VAULT,
+    abi: ABIS.RISEFI_VAULT,
+    functionName: "owner",
+  });
+
+  // Check if user is owner
+  useEffect(() => {
+    if (address && owner) {
+      setIsOwner(address.toLowerCase() === owner.toLowerCase());
+    } else {
+      setIsOwner(false);
+    }
+  }, [address, owner]);
+
+  // Avoid hydration error by waiting for client-side mount
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -21,6 +39,9 @@ export default function Header() {
     { name: "Academy", href: "/academy" },
     ...(mounted && isConnected
       ? [{ name: "Dashboard", href: "/dashboard" }]
+      : []),
+    ...(mounted && isConnected && isOwner
+      ? [{ name: "Admin", href: "/admin" }]
       : []),
   ];
 
@@ -62,7 +83,11 @@ export default function Header() {
                 href={item.href}
                 className={`font-medium transition duration-200 ${
                   isActive(item.href)
-                    ? "text-[#f5c249] border-b-2 border-[#f5c249]"
+                    ? item.name === "Admin"
+                      ? "text-red-400 border-b-2 border-red-400"
+                      : "text-[#f5c249] border-b-2 border-[#f5c249]"
+                    : item.name === "Admin"
+                    ? "text-red-400 hover:text-red-300"
                     : "text-gray-300 hover:text-[#f5c249]"
                 }`}
               >
@@ -178,7 +203,11 @@ export default function Header() {
                   onClick={() => setIsMenuOpen(false)}
                   className={`font-medium transition duration-200 py-2 px-4 rounded-lg ${
                     isActive(item.href)
-                      ? "text-[#f5c249] bg-gray-700"
+                      ? item.name === "Admin"
+                        ? "text-red-400 bg-red-900/20"
+                        : "text-[#f5c249] bg-gray-700"
+                      : item.name === "Admin"
+                      ? "text-red-400 hover:text-red-300 hover:bg-red-900/20"
                       : "text-gray-300 hover:text-[#f5c249] hover:bg-gray-700"
                   }`}
                 >

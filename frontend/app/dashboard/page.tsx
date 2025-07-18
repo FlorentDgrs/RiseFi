@@ -1,36 +1,83 @@
 "use client";
 import Header from "@/components/shared/Header";
 import Footer from "@/components/shared/Footer";
-import DepositCard from "@/components/shared/DepositCard";
-import WithdrawCard from "@/components/shared/WithdrawCard";
-// import YieldTracker from "@/components/shared/YieldTracker";
-// import RealYieldTracker from "@/components/shared/RealYieldTracker";
+import ActionCard from "@/components/shared/ActionCard";
+import VaultStatusBanner from "@/components/shared/VaultStatusBanner";
 import { useVaultUserStats } from "@/utils/hooks/useVaultUserStats";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import React from "react";
 
 const VAULT_ADDRESS_APY = "0x7BfA7C4f149E7415b73bdeDfe609237e29CBF34A";
 const CHAIN_ID = 8453; // Base
 const MORPHO_API_URL = "https://api.morpho.org/graphql";
 
+// Memoized APY display component
+const ApyDisplay = React.memo(function ApyDisplay({
+  apy,
+  apyLoading,
+}: {
+  apy: number | null;
+  apyLoading: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="font-mono text-[#f5c249] text-lg font-bold">
+        {apyLoading
+          ? "...%"
+          : apy !== null
+          ? `${(apy * 100).toFixed(2)}%`
+          : "-"}
+      </span>
+      <Link
+        href="/academy?section=understanding-apy"
+        className="group relative"
+      >
+        <svg
+          className="w-4 h-4 text-gray-400 hover:text-[#f5c249] transition-colors cursor-help"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
+          What is APY? Learn more
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+        </div>
+      </Link>
+    </div>
+  );
+});
+
 export default function Dashboard() {
   const stats = useVaultUserStats();
-  const { isConnected } = useAccount();
+  const { isConnected, isConnecting } = useAccount();
   const router = useRouter();
+  const [isMounted, setIsMounted] = useState(false);
+  const [apy, setApy] = useState<number | null>(null);
+  const [apyLoading, setApyLoading] = useState(true);
+
+  // Avoid hydration error
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Redirect to home if not connected
   useEffect(() => {
-    if (!isConnected) {
+    if (isMounted && !isConnecting && !isConnected) {
       router.push("/");
     }
-  }, [isConnected, router]);
+  }, [isMounted, isConnecting, isConnected, router]);
 
-  // APY state
-  const [apy, setApy] = useState<number | null>(null);
-  const [apyLoading, setApyLoading] = useState<boolean>(true);
-
+  // Optimized APY fetch with reduced frequency
   useEffect(() => {
     const fetchApy = async () => {
       setApyLoading(true);
@@ -68,10 +115,72 @@ export default function Dashboard() {
         setApyLoading(false);
       }
     };
+
     fetchApy();
-    const interval = setInterval(fetchApy, 60000);
+    // Reduced frequency: fetch every 5 minutes instead of 1 minute
+    const interval = setInterval(fetchApy, 300000);
     return () => clearInterval(interval);
   }, []);
+
+  // Memoized refetch handler
+  const handleRefetchStats = useCallback(() => {
+    stats.refetch();
+  }, [stats]);
+
+  // Memoized balance display to prevent flickering
+  const balanceDisplay = useMemo(
+    () => (
+      <div className="flex flex-col gap-0.5">
+        <div className="flex items-baseline gap-1">
+          <span className="text-white text-sm">Wallet Balance:</span>
+          <span className="font-mono text-[#f5c249] text-sm">
+            {stats.usdcBalanceStr}
+          </span>
+          <span className="text-[#f5c249] text-sm">USDC</span>
+        </div>
+        <div className="flex items-baseline gap-1">
+          <span className="text-white text-sm">Invested in EasyVest:</span>
+          <span className="font-mono text-[#f5c249] text-sm">
+            {stats.investedAmountStr}
+          </span>
+          <span className="text-[#f5c249] text-sm">USDC</span>
+        </div>
+      </div>
+    ),
+    [stats.usdcBalanceStr, stats.investedAmountStr]
+  );
+
+  // Show loader while checking connection or not mounted
+  if (!isMounted || isConnecting) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-gray-800 to-black">
+        <Header />
+        <main className="flex-1 flex flex-col items-center justify-center p-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#f5c249] mx-auto mb-4"></div>
+            <p className="text-gray-400">Loading...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Show loader if not connected (will redirect)
+  if (!isConnected) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-gray-800 to-black">
+        <Header />
+        <main className="flex-1 flex flex-col items-center justify-center p-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#f5c249] mx-auto mb-4"></div>
+            <p className="text-gray-400">Redirecting to home...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-gray-800 to-black">
@@ -82,6 +191,10 @@ export default function Dashboard() {
           <div className="w-full text-center mb-8">
             <h1 className="text-4xl font-bold text-[#f5c249]">Dashboard</h1>
           </div>
+
+          {/* Vault Status Banner */}
+          <VaultStatusBanner />
+
           {/* Carte unique : Wallet + EasyVest + Actions */}
           <div className="w-full max-w-md bg-gray-900/90 rounded-2xl p-8 shadow-xl border border-gray-700 flex flex-col gap-6 mx-auto">
             {/* Strategy header */}
@@ -89,65 +202,19 @@ export default function Dashboard() {
               <span className="text-gray-200 font-semibold text-lg">
                 Strategy: EasyVest
               </span>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-[#f5c249] text-lg font-bold">
-                  {apyLoading
-                    ? "...%"
-                    : apy !== null
-                    ? `${(apy * 100).toFixed(2)}%`
-                    : "-"}
-                </span>
-                <Link
-                  href="/academy?section=understanding-apy"
-                  className="group relative"
-                >
-                  <svg
-                    className="w-4 h-4 text-gray-400 hover:text-[#f5c249] transition-colors cursor-help"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
-                    What is APY? Learn more
-                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-                  </div>
-                </Link>
-              </div>
+              <ApyDisplay apy={apy} apyLoading={apyLoading} />
             </div>
-            {/* Infos wallet/invested compactes */}
-            <div className="flex flex-col gap-0.5">
-              <div className="flex items-baseline gap-1">
-                <span className="text-white text-sm">
-                  Available in your wallet:
-                </span>
-                <span className="font-mono text-[#f5c249] text-sm">
-                  {Number(stats.usdcBalanceStr).toFixed(2)}
-                </span>
-                <span className="text-[#f5c249] text-sm">USDC</span>
-              </div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-white text-sm">Invested:</span>
-                <span className="font-mono text-[#f5c249] text-sm">
-                  {stats.investedAmountStr}
-                </span>
-                <span className="text-[#f5c249] text-sm">USDC</span>
-              </div>
-            </div>
+
+            {/* Balance display */}
+            {balanceDisplay}
+
+            {/* Action card */}
             <div className="flex flex-col gap-6">
-              <DepositCard
+              <ActionCard
                 usdcBalanceStr={stats.usdcBalanceStr}
-                refetchStats={stats.refetch}
-              />
-              <WithdrawCard
                 maxWithdrawStr={stats.maxWithdrawStr}
-                refetchStats={stats.refetch}
+                investedAmountStr={stats.investedAmountStr}
+                refetchStats={handleRefetchStats}
               />
             </div>
           </div>

@@ -12,26 +12,25 @@ export default function Home() {
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
 
+  // Mounting optimization - faster
   useEffect(() => {
+    // Immediate mounting to avoid latency
     setIsMounted(true);
   }, []);
-
-  // No auto-redirect - allow connected users to access home page
-  // Users can manually navigate to dashboard using the "Access Dashboard" button
 
   const handleGoToDashboard = () => {
     router.push("/dashboard");
   };
 
-  // Show loader while checking connection
+  // Show minimal loader only if not mounted yet
   if (!isMounted) {
     return (
       <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-gray-800 to-black">
         <Header />
         <main className="flex-1 flex flex-col items-center justify-center p-8">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#f5c249] mx-auto mb-4"></div>
-            <p className="text-gray-400">Loading...</p>
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#f5c249] mx-auto mb-2"></div>
+            <p className="text-gray-400 text-sm">Loading...</p>
           </div>
         </main>
         <Footer />
@@ -203,11 +202,13 @@ export default function Home() {
                       fill="#f5c249"
                     />
                   </svg>
-                  <h3 className="text-2xl font-semibold text-white">Simple</h3>
+                  <h3 className="text-2xl font-semibold text-white">
+                    Security & Transparency
+                  </h3>
                 </div>
                 <p className="text-gray-400 leading-relaxed">
-                  Intuitive interface, secure smart contracts, and full control
-                  of your funds. DeFi doesn't have to be complicated.
+                  All our smart contracts are open source and audited. Your
+                  funds are always under your control.
                 </p>
               </div>
             </div>
@@ -216,36 +217,34 @@ export default function Home() {
 
         {/* CTA Section */}
         <section className="py-20 px-8">
-          <div className="max-w-5xl mx-auto text-center">
-            <h2 className="text-4xl font-bold text-white mb-8">
-              Ready to Earn Better Returns?
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-4xl font-bold text-white mb-6">
+              Ready to Start Earning?
             </h2>
-            <p className="text-gray-400 mb-12 text-xl leading-relaxed">
-              Join thousands of users who've discovered how easy it is to earn
-              more with RiseFi.
+            <p className="text-xl text-gray-300 mb-8">
+              Join thousands of users who are already earning better returns
+              with RiseFi.
             </p>
             {isConnected ? (
               <button
                 onClick={handleGoToDashboard}
                 className="bg-[#f5c249] hover:bg-[#e6b142] text-gray-900 font-bold py-4 px-8 rounded-xl text-lg transition duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
               >
-                Access Dashboard
+                Go to Dashboard
               </button>
             ) : (
-              <div className="flex justify-center">
-                <ConnectButton.Custom>
-                  {({ openConnectModal }) => {
-                    return (
-                      <button
-                        onClick={openConnectModal}
-                        className="bg-[#f5c249] hover:bg-[#e6b142] text-gray-900 font-bold py-4 px-8 rounded-xl text-lg transition duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-                      >
-                        Connect Wallet to Start Earning
-                      </button>
-                    );
-                  }}
-                </ConnectButton.Custom>
-              </div>
+              <ConnectButton.Custom>
+                {({ openConnectModal }) => {
+                  return (
+                    <button
+                      onClick={openConnectModal}
+                      className="bg-[#f5c249] hover:bg-[#e6b142] text-gray-900 font-bold py-4 px-8 rounded-xl text-lg transition duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                    >
+                      Connect Wallet & Start Earning
+                    </button>
+                  );
+                }}
+              </ConnectButton.Custom>
             )}
           </div>
         </section>

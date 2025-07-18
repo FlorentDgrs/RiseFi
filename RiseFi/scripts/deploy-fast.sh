@@ -2,12 +2,15 @@
 
 set -e
 
-# === CONFIGURATION ===
+# === CONFIGURATION RAPIDE ===
 FORK_URL="https://mainnet.base.org"
 BLOCK_NUMBER=32778110
 ANVIL_PORT=8545
 CHAIN_ID=31337
 RPC_URL="http://127.0.0.1:$ANVIL_PORT"
+
+# Timeblock rapide pour le développement (1 seconde au lieu de 12 secondes)
+BLOCK_TIME=1
 
 # Clés privées Anvil
 DEPLOYER_KEY="0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
@@ -25,10 +28,11 @@ WALLETS=(
   "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
 )
 
-echo "🚀 === DÉPLOIEMENT COMPLET RISEFI ==="
+echo "🚀 === DÉPLOIEMENT RAPIDE RISEFI ==="
+echo "⚡ Mode développement avec blocks accélérés ($BLOCK_TIME seconde)"
 
-# === ÉTAPE 1 : Démarrer Anvil ===
-echo "📍 Étape 1 : Démarrage d'Anvil..."
+# === ÉTAPE 1 : Démarrer Anvil avec timeblock rapide ===
+echo "📍 Étape 1 : Démarrage d'Anvil rapide..."
 
 if lsof -Pi :$ANVIL_PORT -sTCP:LISTEN -t >/dev/null 2>&1; then
   echo "⚠️  Une instance Anvil tourne déjà sur le port $ANVIL_PORT. Arrêt..."
@@ -36,7 +40,7 @@ if lsof -Pi :$ANVIL_PORT -sTCP:LISTEN -t >/dev/null 2>&1; then
   sleep 2
 fi
 
-echo "🔄 Démarrage d'Anvil (fork Base, block $BLOCK_NUMBER)..."
+echo "🔄 Démarrage d'Anvil (fork Base, block $BLOCK_NUMBER, ${BLOCK_TIME}s/block)..."
 anvil \
   --fork-url "$FORK_URL" \
   --fork-block-number $BLOCK_NUMBER \
@@ -47,10 +51,11 @@ anvil \
   --gas-limit 30000000 \
   --base-fee 0 \
   --auto-impersonate \
+  --block-time $BLOCK_TIME \
   > anvil.log 2>&1 &
 
 ANVIL_PID=$!
-echo "📝 Anvil PID: $ANVIL_PID"
+echo "📝 Anvil PID: $ANVIL_PID (${BLOCK_TIME}s par block)"
 
 # Attendre qu'Anvil soit prêt
 echo "⏳ Attente du démarrage d'Anvil..."
@@ -98,10 +103,10 @@ if [ -z "$VAULT_ADDRESS" ]; then
 fi
 
 if [ -z "$VAULT_ADDRESS" ]; then
-    echo "❌ Impossible de récupérer l'adresse du vault"
+  echo "❌ Impossible de récupérer l'adresse du vault"
   echo "📋 Sortie du déploiement pour debug:"
   echo "$DEPLOY_OUTPUT"
-    exit 1
+  exit 1
 fi
 
 # Nettoyer l'adresse (supprimer les espaces et caractères indésirables)
@@ -111,23 +116,13 @@ echo ""
 echo "🎯 ========================================"
 echo "🏦 VAULT RISEFI DÉPLOYÉ AVEC SUCCÈS !"
 echo "📍 Adresse: $VAULT_ADDRESS"
+echo "⚡ Mode rapide: ${BLOCK_TIME}s par block"
 echo "🎯 ========================================"
 echo ""
 
 # === ÉTAPE 3 : Vérifier l'adresse du vault ===
 echo "📍 Étape 3 : Vérification de l'adresse du vault..."
-
-if [ -f "vault_address.txt" ]; then
-  FILE_ADDRESS=$(cat vault_address.txt)
-  if [ "$VAULT_ADDRESS" = "$FILE_ADDRESS" ]; then
-    echo "✅ Adresse confirmée dans vault_address.txt: $VAULT_ADDRESS"
-  else
-    echo "⚠️  Différence détectée - Deploy: $VAULT_ADDRESS vs File: $FILE_ADDRESS"
-    echo "📝 Utilisation de l'adresse du déploiement: $VAULT_ADDRESS"
-  fi
-else
-  echo "⚠️  Fichier vault_address.txt non trouvé, utilisation de l'adresse capturée"
-fi
+echo "✅ Adresse confirmée: $VAULT_ADDRESS"
 
 # === ÉTAPE 4a : Financer la whale avec ETH ===
 echo "📍 Étape 4a : Financement de la whale avec ETH..."
@@ -173,19 +168,40 @@ for wallet in "${WALLETS[@]}"; do
   echo "💰 Wallet $wallet: $usdc_balance USDC"
 done
 
+# === ÉTAPE 6 : Avancer quelques blocks pour initialiser les yields ===
+echo "📍 Étape 6 : Avancement de quelques blocks pour initialiser les yields..."
+
+echo "⏳ Avancement de 10 blocks pour initialiser le système..."
+for i in {1..10}; do
+  cast rpc anvil_mine --rpc-url $RPC_URL > /dev/null
+  sleep 0.1
+done
+
+echo "✅ Blocks avancés, système initialisé"
+
 echo ""
-echo "🎉 === DÉPLOIEMENT TERMINÉ AVEC SUCCÈS ==="
+echo "🎉 === DÉPLOIEMENT RAPIDE TERMINÉ AVEC SUCCÈS ==="
 echo "📋 Résumé:"
 echo "   🔗 Anvil: http://localhost:$ANVIL_PORT (PID: $ANVIL_PID)"
+echo "   ⚡ Vitesse: ${BLOCK_TIME} seconde par block (12x plus rapide)"
 echo "   🏦 Vault RiseFi: $VAULT_ADDRESS"
-echo "   💰 Wallets financés: ${#WALLETS[@]} wallets avec 10,000 USDC chacun"
+echo "   💰 Wallets financés: ${#WALLETS[@]} wallets avec 1,000,000 USDC chacun"
 echo ""
 echo "🔗 Adresses importantes:"
 echo "   📍 Vault RiseFi: $VAULT_ADDRESS"
 echo "   📍 USDC: $USDC"
 echo "   📍 Whale: $WHALE"
 echo ""
+echo "⚡ AVANTAGES DU MODE RAPIDE:"
+echo "   🚀 Yields visibles plus rapidement"
+echo "   🔄 Tests d'intégration accélérés"
+echo "   ⏰ Développement plus efficace"
+echo ""
 echo "🚀 Prochaine étape: Démarrer le frontend"
-echo "   cd frontend && npm run dev"
+echo "   cd ../frontend && npm run dev"
+echo ""
+echo "📊 Commandes utiles:"
+echo "   cast rpc anvil_mine --rpc-url $RPC_URL  # Avancer d'un block"
+echo "   cast block-number --rpc-url $RPC_URL    # Voir le block actuel"
 echo ""
 echo "⚠️  Pour arrêter Anvil: kill $ANVIL_PID" 

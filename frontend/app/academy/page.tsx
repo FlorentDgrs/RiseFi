@@ -1,3 +1,5 @@
+/* eslint-disable react/no-unescaped-entities */
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 import Header from "@/components/shared/Header";
 import Footer from "@/components/shared/Footer";
@@ -1432,7 +1434,7 @@ export default function Academy() {
   );
 
   // Check if section is locked and user is not connected
-  const isSectionLocked = activeSectionData?.locked && !isConnected;
+  // const isSectionLocked = activeSectionData?.locked && !isConnected;
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-gray-800 to-black">

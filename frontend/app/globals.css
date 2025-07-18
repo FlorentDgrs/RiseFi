@@ -73,6 +73,90 @@ body {
   }
 }
 
+/* Enhanced Toast Styling */
+@layer components {
+  .toaster {
+    --width: 356px;
+    --font-family: inherit;
+    --border-radius: var(--radius);
+    --close-button-transform: translate(50%, -50%);
+  }
+
+  .toaster .toast {
+    transform: translateY(0);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .toaster .toast[data-expanded="false"] {
+    transform: scale(0.98) translateY(4px);
+    opacity: 0.9;
+  }
+
+  .toaster .toast[data-expanded="true"] {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+
+  .toaster .toast[data-removing="true"] {
+    animation: slideOut 0.2s cubic-bezier(0.4, 0, 1, 1);
+  }
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideOut {
+    to {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+  }
+
+  /* Elegant toast variants with colored borders */
+  .toast-success {
+    background: #1f2937 !important; /* Solid gray-800 */
+    color: #f9fafb !important; /* Solid gray-50 */
+    border: 1px solid #4b5563 !important; /* Solid gray-600 */
+    border-left: 4px solid hsl(142 76% 36%) !important; /* Green */
+  }
+
+  .toast-error {
+    background: #1f2937 !important; /* Solid gray-800 */
+    color: #f9fafb !important; /* Solid gray-50 */
+    border: 1px solid #4b5563 !important; /* Solid gray-600 */
+    border-left: 4px solid #ef4444 !important; /* Red */
+  }
+
+  .toast-info {
+    background: #1f2937 !important; /* Solid gray-800 */
+    color: #f9fafb !important; /* Solid gray-50 */
+    border: 1px solid #4b5563 !important; /* Solid gray-600 */
+    border-left: 4px solid #f5c249 !important; /* RiseFi yellow */
+  }
+
+  .toast-loading {
+    background: #1f2937 !important; /* Solid gray-800 */
+    color: #f9fafb !important; /* Solid gray-50 */
+    border: 1px solid #4b5563 !important; /* Solid gray-600 */
+    border-left: 4px solid #9ca3af !important; /* Gray */
+  }
+
+  .toast-approval {
+    background: #1f2937 !important; /* Solid gray-800 */
+    color: #f9fafb !important; /* Solid gray-50 */
+    border: 1px solid #4b5563 !important; /* Solid gray-600 */
+    border-left: 4px solid hsl(142 76% 36%) !important; /* Green */
+  }
+}
+
 /* Classes utilitaires RiseFi */
 .bg-risefi-gradient {
   background: linear-gradient(135deg, #111827 0%, #1f2937 50%, #374151 100%);

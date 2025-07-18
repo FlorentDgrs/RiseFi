@@ -34,7 +34,6 @@ const VaultApyDisplay: React.FC = () => {
         body: JSON.stringify({ query }),
       });
       const data = await response.json();
-      console.log("Morpho API Response:", data);
 
       const vault = data?.data?.vaultByAddress;
       const netApy = vault?.state?.netApy ?? vault?.state?.apy;
@@ -44,7 +43,7 @@ const VaultApyDisplay: React.FC = () => {
         setApy(null);
         setError("APY not available");
       }
-    } catch (e) {
+    } catch {
       setError("Error fetching APY");
       setApy(null);
     } finally {

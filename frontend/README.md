@@ -1,18 +1,44 @@
 # RiseFi Frontend
 
-## Affichage du rendement (APY) du Vault Morpho
+Modern React/Next.js frontend for the RiseFi DeFi yield vault platform, featuring real-time APY display and seamless wallet integration.
 
-Le composant `VaultApyDisplay` permet d'afficher en temps réel le rendement (APY) du vault Morpho principal, en interrogeant l'API GraphQL publique de Morpho.
+## 🚀 Quick Start
 
-### Fonctionnement
+```bash
+# Install dependencies
+npm install
 
-- **Aucune clé API n'est nécessaire** : l'API Morpho est publique.
-- Le composant effectue une requête GraphQL sur l'endpoint :
-  - `https://api.morpho.org/graphql`
-- Il récupère la liste des vaults, filtre sur l'adresse du vault cible, et affiche le champ `netApy` (ou `apy` si indisponible).
-- Le taux est rafraîchi automatiquement toutes les 60 secondes.
+# Start development server
+npm run dev
 
-### Exemple de requête GraphQL utilisée
+# Build for production
+npm run build
+
+# Run checks (TypeScript + Lint + Build)
+npm run check
+```
+
+## 🎨 Features
+
+- **Real-time APY Display** — Live yield rates from Morpho API
+- **Wallet Integration** — RainbowKit with MetaMask support
+- **Transaction Management** — Toast notifications and loading states
+- **Admin Dashboard** — Contract management for vault owner
+- **Responsive Design** — Mobile-first with Tailwind CSS
+- **Type Safety** — Full TypeScript support
+
+## 📊 Real-time APY Display
+
+The `VaultApyDisplay` component shows real-time yield rates from the Morpho vault by querying the public GraphQL API.
+
+### How it works
+
+- **No API key required** — Morpho API is public
+- Queries GraphQL endpoint: `https://api.morpho.org/graphql`
+- Fetches vault list, filters by target address, displays `netApy` (or `apy` if unavailable)
+- Rate refreshes automatically every 60 seconds
+
+### Example GraphQL Query
 
 ```graphql
 query {
@@ -31,7 +57,7 @@ query {
 }
 ```
 
-### Exemple d'intégration dans une page Next.js
+### Integration Example
 
 ```tsx
 import VaultApyDisplay from "@/components/VaultApyDisplay";
@@ -45,25 +71,75 @@ export default function Home() {
 }
 ```
 
-### Pour changer le vault affiché
+### Changing the Target Vault
 
-Modifie la constante `VAULT_ADDRESS` dans `components/VaultApyDisplay.tsx` :
+Modify the `VAULT_ADDRESS` constant in `components/VaultApyDisplay.tsx`:
 
 ```ts
 const VAULT_ADDRESS = "0x...".toLowerCase();
 ```
 
-### Champs disponibles
+### Available Fields
 
-- `netApy` : rendement net annualisé (recommandé)
-- `apy` : rendement brut annualisé
-- `rewards.supplyApr` : APR des rewards (si applicable)
+- `netApy` — Net annualized yield (recommended)
+- `apy` — Gross annualized yield
+- `rewards.supplyApr` — Rewards APR (if applicable)
 
-### Dépendances
+## 🏗️ Architecture
 
-- Aucune dépendance externe (pas de clé API, pas de Provider urql)
-- Utilise uniquement `fetch` natif et React
+```
+frontend/
+├── app/
+│   ├── dashboard/             # Main dashboard page
+│   └── admin/                 # Admin dashboard
+├── components/
+│   ├── shared/                # Reusable components
+│   │   ├── ActionCard.tsx     # Deposit/Withdraw interface
+│   │   ├── VaultApyDisplay.tsx # Real-time APY display
+│   │   └── AdminDashboard.tsx # Admin controls
+│   └── ui/                    # UI components
+├── utils/
+│   └── contracts.ts           # Contract utilities
+└── types/                     # TypeScript definitions
+```
 
----
+## 🔧 Configuration
 
-Pour toute question ou adaptation (autres métriques, historique, etc.), voir le code du composant ou demander à l'équipe technique.
+- **Network**: Base network (Chain ID: 8453)
+- **Wallet**: RainbowKit with MetaMask support
+- **Styling**: Tailwind CSS with custom design system
+- **State Management**: React hooks with Wagmi
+- **Build Tool**: Next.js 14 with App Router
+
+## 📱 Pages
+
+- **Dashboard** (`/dashboard`) — Main user interface for deposits/withdrawals
+- **Admin** (`/admin`) — Contract management for vault owner
+- **Home** (`/`) — Landing page with project information
+
+## 🛠️ Development
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Run type checking
+npm run type-check
+
+# Run linting
+npm run lint
+
+# Build for production
+npm run build
+```
+
+## 📦 Dependencies
+
+- **Next.js 14** — React framework
+- **Tailwind CSS** — Utility-first CSS
+- **Wagmi** — React hooks for Ethereum
+- **RainbowKit** — Wallet connection library
+- **TypeScript** — Type safety

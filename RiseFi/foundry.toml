@@ -6,10 +6,6 @@ solc_version = "0.8.27"
 build_info = true
 extra_output = ["storageLayout"]
 
-# Fork configuration for tests (Base mainnet)
-fork_url = "https://mainnet.base.org"
-fork_block_number = 32778110  # Latest working block for Morpho vault
-
 # Test configuration
 [profile.default.fuzz]
 runs = 256
@@ -18,33 +14,15 @@ runs = 256
 runs = 256
 depth = 15
 
-# --- Optimizer settings for Solidity ---
+# Optimizer settings for Solidity
 optimizer = true
 optimizer_runs = 200
 
 # RPC endpoints configuration
 [rpc_endpoints]
-base_public = "https://mainnet.base.org"           # Public Base RPC
-base_private = "${ALCHEMY_BASE_RPC_URL}"           # Private Alchemy RPC
-sepolia = "${ALCHEMY_BASE_SEPOLIA_URL}"            # Sepolia testnet
-
-# Profile for current yields (most recent working block)
-[profile.current]
-fork_url = "https://mainnet.base.org"
-fork_block_number = 32778110  # Latest working block
-verbosity = 2
-
-# Profile for 1 month ago comparison
-[profile.month-ago]
-fork_url = "https://mainnet.base.org"
-fork_block_number = 31438322  # ~1 month ago
-verbosity = 2
-
-# Profile for 3 months ago comparison
-[profile.3months-ago]
-fork_url = "https://mainnet.base.org"
-fork_block_number = 28846322  # ~3 months ago
-verbosity = 2
+base_public = "https://mainnet.base.org"
+base_private = "${ALCHEMY_BASE_RPC_URL}"
+sepolia = "${ALCHEMY_BASE_SEPOLIA_URL}"
 
 # Environment variables
 [profile.default.env]

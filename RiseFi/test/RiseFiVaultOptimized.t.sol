@@ -9,28 +9,42 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 
 /**
- * @title RiseFi Vault Optimized Tests
- * @notice Comprehensive tests for the optimized RiseFi vault
- * @dev Tests all features: deposit/redeem, pause, emergency withdraw, custom errors, gas optimizations
+ * @title RiseFi Vault Comprehensive Test Suite
+ * @notice Exhaustive testing for RiseFiVault including edge cases, branch coverage, and gas optimization validation
+ * @dev Test strategy:
+ *      - Unit tests for core ERC4626 functionality
+ *      - Integration tests with real Morpho vault on Base fork
+ *      - Edge case testing for boundary conditions
+ *      - Branch coverage for all code paths
+ *      - Fuzz testing for robustness validation
+ *      - Gas optimization verification
+ * @author RiseFi Team
  */
 contract RiseFiVaultOptimizedTest is Test {
-    // ========== CONTRACTS ==========
+    // ========== STATE VARIABLES ==========
     RiseFiVault public vault;
 
-    // ========== BASE MAINNET ADDRESSES ==========
+    // ========== MAINNET CONSTANTS ==========
+    /// @dev Base mainnet USDC token (6 decimals)
     IERC20Metadata public constant USDC = IERC20Metadata(0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913);
+    /// @dev Target Morpho vault for yield generation
     address public constant MORPHO_VAULT_ADDRESS = 0x3128a0F7f0ea68E7B7c9B00AFa7E41045828e858;
 
-    // ========== WHALE ADDRESSES ==========
+    // ========== TEST CONFIGURATION ==========
+    /// @dev Base mainnet whale address with substantial USDC balance
     address public constant USDC_WHALE = 0x0B0A5886664376F59C351ba3f598C8A8B4D0A6f3;
+    /// @dev Standard test amount: 1,000 USDC (6 decimals)
+    uint256 public constant AMOUNT = 1000 * 10 ** 6;
+    /// @dev Fork block number for consistent testing environment
+    uint256 public constant FORK_BLOCK = 32_778_110;
 
-    // ========== TEST ADDRESSES ==========
+    // ========== TEST ACTORS ==========
     address public testUser = address(0x1234);
     address public testUser2 = address(0x5678);
     address public owner = address(0x9999);
-    uint256 public constant AMOUNT = 1000 * 10 ** 6; // 1000 USDC
 
-    // ========== EVENTS ==========
+    // ========== EVENT SIGNATURES ==========
+    /// @dev Events from RiseFiVault contract for testing
     event DeadSharesMinted(uint256 deadShares, address deadAddress);
     event SlippageGuardTriggered(address indexed user, uint256 expected, uint256 actual, bytes32 indexed operation);
     event EmergencyWithdraw(address indexed user, uint256 shares, uint256 assets);
@@ -39,30 +53,50 @@ contract RiseFiVaultOptimizedTest is Test {
     );
     event Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares);
 
+    /**
+     * @notice Test setup: Deploy vault on Base fork with proper initialization
+     * @dev Creates deterministic testing environment with:
+     *      - Base mainnet fork at specific block
+     *      - Fresh vault deployment
+     *      - Validation of initial state
+     */
     function setUp() public {
-        // Create Base mainnet fork
-        vm.createSelectFork(vm.rpcUrl("base_public"), 32_778_110);
+        // Create deterministic Base mainnet fork
+        vm.createSelectFork(vm.rpcUrl("base_public"), FORK_BLOCK);
 
-        // Deploy vault as owner
+        // Deploy vault with proper ownership
         vm.startPrank(owner);
         vault = new RiseFiVault(IERC20(address(USDC)), MORPHO_VAULT_ADDRESS);
         vm.stopPrank();
 
-        // Verify setup
-        assertEq(USDC.decimals(), 6, "USDC should have 6 decimals");
-        assertEq(USDC.symbol(), "USDC", "Should be USDC token");
-        assertEq(vault.decimals(), 18, "rfUSDC should have 18 decimals");
-        assertEq(vault.owner(), owner, "Owner should be set correctly");
+        // Validate deployment assumptions
+        assertEq(USDC.decimals(), 6, "USDC decimals assumption violated");
+        assertEq(USDC.symbol(), "USDC", "USDC symbol assumption violated");
+        assertEq(vault.decimals(), 18, "Vault decimals assumption violated");
+        assertEq(vault.owner(), owner, "Vault ownership not set correctly");
     }
 
     // ========== HELPER FUNCTIONS ==========
 
+    /**
+     * @notice Fund test user with USDC from whale account
+     * @dev Uses vm.startPrank to impersonate whale for token transfers
+     * @param to Recipient address
+     * @param amount Amount of USDC to transfer (6 decimals)
+     */
     function _fundUser(address to, uint256 amount) internal {
         vm.startPrank(USDC_WHALE);
         USDC.transfer(to, amount);
         vm.stopPrank();
     }
 
+    /**
+     * @notice Complete deposit workflow: fund user, approve, and deposit
+     * @dev Encapsulates common test pattern for cleaner test code
+     * @param userAddr Address to perform deposit for
+     * @param amount Amount of USDC to deposit
+     * @return shares Number of vault shares received
+     */
     function _depositForUser(address userAddr, uint256 amount) internal returns (uint256 shares) {
         _fundUser(userAddr, amount);
 
@@ -72,8 +106,15 @@ contract RiseFiVaultOptimizedTest is Test {
         vm.stopPrank();
     }
 
-    // ========== BASIC FUNCTIONALITY TESTS ==========
+    // ========== CORE FUNCTIONALITY TESTS ==========
 
+    /**
+     * @notice Test basic deposit functionality with standard amount
+     * @dev Validates:
+     *      - Successful share minting
+     *      - Correct share balance attribution
+     *      - Complete USDC transfer to vault
+     */
     function test_Optimized_Deposit_Basic() public {
         _fundUser(testUser, AMOUNT);
 
@@ -82,17 +123,24 @@ contract RiseFiVaultOptimizedTest is Test {
 
         uint256 shares = vault.deposit(AMOUNT, testUser);
 
-        assertGt(shares, 0, "Should receive shares");
-        assertEq(vault.balanceOf(testUser), shares, "User should have shares");
-        assertEq(USDC.balanceOf(testUser), 0, "User should have transferred USDC");
+        assertGt(shares, 0, "Share minting failed");
+        assertEq(vault.balanceOf(testUser), shares, "Incorrect share balance");
+        assertEq(USDC.balanceOf(testUser), 0, "USDC transfer incomplete");
         vm.stopPrank();
     }
 
+    /**
+     * @notice Test partial redemption with asset validation
+     * @dev Validates:
+     *      - Accurate asset conversion calculations
+     *      - Proper share burning
+     *      - Correct USDC transfer to user
+     */
     function test_Optimized_Redeem_Basic() public {
-        // Setup: user deposits
+        // Setup: establish position
         uint256 shares = _depositForUser(testUser, AMOUNT);
 
-        // Redeem half
+        // Execute: redeem 50% of position
         uint256 sharesToRedeem = shares / 2;
         uint256 expectedAssets = vault.convertToAssets(sharesToRedeem);
 
@@ -100,111 +148,166 @@ contract RiseFiVaultOptimizedTest is Test {
         uint256 assetsReceived = vault.redeem(sharesToRedeem, testUser, testUser);
         vm.stopPrank();
 
-        assertApproxEqAbs(assetsReceived, expectedAssets, 100, "Should receive expected assets");
-        assertEq(vault.balanceOf(testUser), shares - sharesToRedeem, "Should have remaining shares");
-        assertEq(USDC.balanceOf(testUser), assetsReceived, "Should have received USDC");
+        // Validate: redemption accuracy within acceptable tolerance
+        assertApproxEqAbs(assetsReceived, expectedAssets, 100, "Asset conversion calculation error");
+        assertEq(vault.balanceOf(testUser), shares - sharesToRedeem, "Share burning error");
+        assertEq(USDC.balanceOf(testUser), assetsReceived, "USDC transfer error");
     }
 
+    /**
+     * @notice Test complete position redemption
+     * @dev Validates:
+     *      - Full share burning to zero
+     *      - Asset recovery proportional to shares
+     *      - Clean state after full redemption
+     */
     function test_Optimized_Redeem_Full() public {
-        // Setup: user deposits
+        // Setup: establish full position
         uint256 shares = _depositForUser(testUser, AMOUNT);
 
-        // Redeem all
+        // Execute: redeem entire position
         vm.startPrank(testUser);
         uint256 assetsReceived = vault.redeem(shares, testUser, testUser);
         vm.stopPrank();
 
-        assertEq(vault.balanceOf(testUser), 0, "Should have no shares left");
-        assertGt(assetsReceived, 0, "Should receive assets");
-        assertEq(USDC.balanceOf(testUser), assetsReceived, "Should have received USDC");
+        // Validate: complete position closure
+        assertEq(vault.balanceOf(testUser), 0, "Full redemption failed - shares remain");
+        assertGt(assetsReceived, 0, "No assets received on full redemption");
+        assertEq(USDC.balanceOf(testUser), assetsReceived, "USDC transfer mismatch");
     }
 
-    // ========== DECIMALS TESTS ==========
+    // ========== DECIMAL PRECISION TESTS ==========
 
+    /**
+     * @notice Test decimal handling between 6-decimal USDC and 18-decimal vault shares
+     * @dev Critical for preventing precision loss and ensuring accurate conversions
+     *      USDC: 6 decimals (1 USDC = 1_000_000 units)
+     *      rfUSDC: 18 decimals (1 rfUSDC = 1_000_000_000_000_000_000 units)
+     */
     function test_Optimized_Decimals() public view {
-        assertEq(vault.decimals(), 18, "rfUSDC should have 18 decimals");
-        assertEq(USDC.decimals(), 6, "USDC should have 6 decimals");
+        // Validate decimal assumptions
+        assertEq(vault.decimals(), 18, "Vault decimal precision changed");
+        assertEq(USDC.decimals(), 6, "USDC decimal precision changed");
 
-        // Test conversion avec différents décimaux
-        uint256 usdcAmount = 1000 * 10 ** 6; // 1000 USDC (6 décimales)
+        // Test conversion precision with realistic amount
+        uint256 usdcAmount = 1000 * 10 ** 6; // 1,000.000000 USDC
         uint256 expectedShares = vault.previewDeposit(usdcAmount);
 
-        // Les shares peuvent être égales ou supérieures selon l'état du vault
-        assertGe(expectedShares, usdcAmount, "Shares should be scaled to 18 decimals or equal");
+        // Shares should maintain value despite decimal difference
+        // In empty vault: 1000 USDC → 1000 * 10^18 shares (1:1 value ratio)
+        assertGe(expectedShares, usdcAmount, "Decimal conversion compromised share value");
     }
 
-    // ========== DISABLED FUNCTIONS TESTS ==========
+    // ========== DISABLED FUNCTION VALIDATION ==========
 
+    /**
+     * @notice Test that withdraw() function is properly disabled
+     * @dev RiseFi vault only supports deposit/redeem pattern for simplified UX
+     *      withdraw() would allow asset-first redemption which complicates slippage handling
+     */
     function test_Optimized_Withdraw_Disabled() public {
         _fundUser(testUser, AMOUNT);
 
         vm.startPrank(testUser);
         USDC.approve(address(vault), AMOUNT);
 
-        // Try to use withdraw - should revert with custom error
+        // Attempt disabled function - should revert with specific error
         vm.expectRevert(RiseFiVault.WithdrawDisabled.selector);
         vault.withdraw(AMOUNT, testUser, testUser);
         vm.stopPrank();
     }
 
+    /**
+     * @notice Test that mint() function is properly disabled
+     * @dev RiseFi vault only supports deposit/redeem pattern for simplified UX
+     *      mint() would allow shares-first deposit which complicates amount calculations
+     */
     function test_Optimized_Mint_Disabled() public {
         _fundUser(testUser, AMOUNT);
 
         vm.startPrank(testUser);
         USDC.approve(address(vault), AMOUNT);
 
-        // Try to use mint - should revert with custom error
+        // Attempt disabled function - should revert with specific error
         vm.expectRevert(RiseFiVault.MintDisabled.selector);
-        vault.mint(1000 * 10 ** 18, testUser); // 1000 shares in 18 decimals
+        vault.mint(1000 * 10 ** 18, testUser); // 1000 shares (18 decimals)
         vm.stopPrank();
     }
 
+    /**
+     * @notice Test that maxWithdraw() returns zero for disabled function
+     * @dev Consistent with ERC4626 standard - disabled functions return zero limits
+     */
     function test_Optimized_MaxWithdraw_Disabled() public view {
         uint256 maxWithdraw = vault.maxWithdraw(testUser);
-        assertEq(maxWithdraw, 0, "maxWithdraw should return 0 (disabled)");
+        assertEq(maxWithdraw, 0, "maxWithdraw must return 0 for disabled function");
     }
 
+    /**
+     * @notice Test that maxMint() returns zero for disabled function
+     * @dev Consistent with ERC4626 standard - disabled functions return zero limits
+     */
     function test_Optimized_MaxMint_Disabled() public view {
         uint256 maxMint = vault.maxMint(testUser);
-        assertEq(maxMint, 0, "maxMint should return 0 (disabled)");
+        assertEq(maxMint, 0, "maxMint must return 0 for disabled function");
     }
 
+    /**
+     * @notice Test that previewWithdraw() returns zero for disabled function
+     * @dev Prevents misleading preview calculations for unavailable operations
+     */
     function test_Optimized_PreviewWithdraw_Disabled() public view {
         uint256 previewWithdraw = vault.previewWithdraw(AMOUNT);
-        assertEq(previewWithdraw, 0, "previewWithdraw should return 0 (disabled)");
+        assertEq(previewWithdraw, 0, "previewWithdraw must return 0 for disabled function");
     }
 
+    /**
+     * @notice Test that previewMint() returns zero for disabled function
+     * @dev Prevents misleading preview calculations for unavailable operations
+     */
     function test_Optimized_PreviewMint_Disabled() public view {
         uint256 previewMint = vault.previewMint(1000 * 10 ** 18);
-        assertEq(previewMint, 0, "previewMint should return 0 (disabled)");
+        assertEq(previewMint, 0, "previewMint must return 0 for disabled function");
     }
 
-    // ========== PAUSE FUNCTIONALITY TESTS ==========
+    // ========== EMERGENCY PAUSE MECHANISM ==========
 
+    /**
+     * @notice Test pause/unpause cycle with state validation
+     * @dev Emergency pause mechanism for protecting user funds during incidents
+     *      Only owner can pause/unpause to prevent governance attacks
+     */
     function test_Optimized_Pause_Unpause() public {
-        // Initialement non pausé
-        assertFalse(vault.paused(), "Should not be paused initially");
-        assertFalse(vault.isPaused(), "isPaused should return false");
+        // Validate: initial unpaused state
+        assertFalse(vault.paused(), "Vault should initialize unpaused");
+        assertFalse(vault.isPaused(), "isPaused() should match paused()");
 
-        // Pause the contract
+        // Execute: emergency pause
         vm.startPrank(owner);
         vault.pause();
         vm.stopPrank();
 
-        assertTrue(vault.paused(), "Should be paused");
-        assertTrue(vault.isPaused(), "isPaused should return true");
+        // Validate: paused state
+        assertTrue(vault.paused(), "Pause operation failed");
+        assertTrue(vault.isPaused(), "isPaused() inconsistent with paused()");
 
-        // Unpause the contract
+        // Execute: resume operations
         vm.startPrank(owner);
         vault.unpause();
         vm.stopPrank();
 
-        assertFalse(vault.paused(), "Should not be paused after unpause");
-        assertFalse(vault.isPaused(), "isPaused should return false");
+        // Validate: resumed state
+        assertFalse(vault.paused(), "Unpause operation failed");
+        assertFalse(vault.isPaused(), "isPaused() inconsistent after unpause");
     }
 
+    /**
+     * @notice Test that deposits are blocked during pause
+     * @dev Critical security feature - prevents new deposits during incidents
+     *      Uses OpenZeppelin v5 pausable pattern with custom errors
+     */
     function test_Optimized_Pause_Deposit_Reverts() public {
-        // Pause the contract
+        // Setup: activate emergency pause
         vm.startPrank(owner);
         vault.pause();
         vm.stopPrank();
@@ -214,36 +317,46 @@ contract RiseFiVaultOptimizedTest is Test {
         vm.startPrank(testUser);
         USDC.approve(address(vault), AMOUNT);
 
-        // Deposit should revert when paused - OpenZeppelin v5 uses custom error
-        vm.expectRevert(); // Generic revert for pause
+        // Attempt deposit during pause - should revert with pause error
+        vm.expectRevert(); // OpenZeppelin v5 pausable revert
         vault.deposit(AMOUNT, testUser);
         vm.stopPrank();
     }
 
+    /**
+     * @notice Test that redemptions are blocked during pause
+     * @dev Critical security feature - prevents redemptions during incidents
+     *      Protects against potential exploits by freezing all operations
+     */
     function test_Optimized_Pause_Redeem_Reverts() public {
-        // Setup: user deposits first
+        // Setup: establish position before pause
         uint256 shares = _depositForUser(testUser, AMOUNT);
 
-        // Pause the contract
+        // Execute: activate emergency pause
         vm.startPrank(owner);
         vault.pause();
         vm.stopPrank();
 
         vm.startPrank(testUser);
-        // Redeem should revert when paused - OpenZeppelin v5 uses custom error
-        vm.expectRevert(); // Generic revert for pause
+        // Attempt redemption during pause - should revert with pause error
+        vm.expectRevert(); // OpenZeppelin v5 pausable revert
         vault.redeem(shares, testUser, testUser);
         vm.stopPrank();
     }
 
+    /**
+     * @notice Test that maxDeposit returns zero during pause
+     * @dev ERC4626 compliance - paused vault should indicate zero capacity
+     *      Prevents UI confusion about available deposit limits
+     */
     function test_Optimized_Pause_MaxDeposit_ReturnsZero() public {
-        // Pause the contract first
+        // Execute: activate emergency pause
         vm.startPrank(owner);
         vault.pause();
         vm.stopPrank();
 
         uint256 maxDeposit = vault.maxDeposit(testUser);
-        assertEq(maxDeposit, 0, "maxDeposit should return 0 when paused");
+        assertEq(maxDeposit, 0, "Paused vault must indicate zero deposit capacity");
     }
 
     function test_Optimized_Pause_MaxRedeem_ReturnsZero() public {
@@ -273,37 +386,55 @@ contract RiseFiVaultOptimizedTest is Test {
         vm.stopPrank();
     }
 
-    // ========== EMERGENCY WITHDRAW TESTS ==========
+    // ========== EMERGENCY WITHDRAWAL SYSTEM ==========
 
+    /**
+     * @notice Test partial emergency withdrawal functionality
+     * @dev Emergency withdrawal bypasses normal Morpho redemption queue
+     *      Allows users to exit positions even during Morpho liquidity constraints
+     *      Critical for user protection during market stress
+     */
     function test_Optimized_EmergencyWithdraw_Basic() public {
-        // Setup: user deposits
+        // Setup: establish position for emergency testing
         uint256 shares = _depositForUser(testUser, AMOUNT);
 
-        // Emergency withdraw half
+        // Execute: partial emergency withdrawal (50% of position)
         uint256 sharesToWithdraw = shares / 2;
 
         vm.startPrank(testUser);
         uint256 assetsReceived = vault.emergencyWithdraw(sharesToWithdraw, testUser);
         vm.stopPrank();
 
-        assertGt(assetsReceived, 0, "Should receive assets");
-        assertEq(vault.balanceOf(testUser), shares - sharesToWithdraw, "Should have remaining shares");
-        assertEq(USDC.balanceOf(testUser), assetsReceived, "Should have received USDC");
+        // Validate: successful partial withdrawal
+        assertGt(assetsReceived, 0, "Emergency withdrawal failed to recover assets");
+        assertEq(vault.balanceOf(testUser), shares - sharesToWithdraw, "Share burning calculation error");
+        assertEq(USDC.balanceOf(testUser), assetsReceived, "USDC recovery mismatch");
     }
 
+    /**
+     * @notice Test complete emergency withdrawal functionality
+     * @dev Full position liquidation through emergency mechanism
+     *      Validates complete state cleanup after emergency exit
+     */
     function test_Optimized_EmergencyWithdraw_Full() public {
-        // Setup: user deposits
+        // Setup: establish full position for emergency testing
         uint256 shares = _depositForUser(testUser, AMOUNT);
 
         vm.startPrank(testUser);
         uint256 assetsReceived = vault.emergencyWithdraw(shares, testUser);
         vm.stopPrank();
 
-        assertEq(vault.balanceOf(testUser), 0, "Should have no shares left");
-        assertGt(assetsReceived, 0, "Should receive assets");
-        assertEq(USDC.balanceOf(testUser), assetsReceived, "Should have received USDC");
+        // Validate: complete position liquidation
+        assertEq(vault.balanceOf(testUser), 0, "Full emergency withdrawal failed");
+        assertGt(assetsReceived, 0, "No assets recovered in emergency");
+        assertEq(USDC.balanceOf(testUser), assetsReceived, "USDC recovery mismatch");
     }
 
+    /**
+     * @notice Test emergency withdrawal with zero shares
+     * @dev Edge case validation - should handle zero input gracefully
+     *      Prevents unnecessary gas consumption and maintains function robustness
+     */
     function test_Optimized_EmergencyWithdraw_ZeroShares() public {
         _depositForUser(testUser, AMOUNT);
 
@@ -311,9 +442,14 @@ contract RiseFiVaultOptimizedTest is Test {
         uint256 assetsReceived = vault.emergencyWithdraw(0, testUser);
         vm.stopPrank();
 
-        assertEq(assetsReceived, 0, "Should receive 0 assets for 0 shares");
+        assertEq(assetsReceived, 0, "Zero shares should return zero assets");
     }
 
+    /**
+     * @notice Test emergency withdrawal with insufficient balance
+     * @dev Security validation - prevents overdraft attempts
+     *      Should revert with specific error indicating balance mismatch
+     */
     function test_Optimized_EmergencyWithdraw_InsufficientBalance() public {
         _depositForUser(testUser, AMOUNT);
         uint256 userShares = vault.balanceOf(testUser);
@@ -324,22 +460,29 @@ contract RiseFiVaultOptimizedTest is Test {
         vm.stopPrank();
     }
 
+    /**
+     * @notice Test emergency withdrawal during pause state
+     * @dev Critical feature - emergency withdrawal must work even when paused
+     *      Ensures users can always exit positions during contract emergencies
+     *      This is the primary purpose of the emergency withdrawal mechanism
+     */
     function test_Optimized_EmergencyWithdraw_WorksWhenPaused() public {
-        // Setup: user deposits
+        // Setup: establish position before emergency
         uint256 shares = _depositForUser(testUser, AMOUNT);
 
-        // Pause the contract
+        // Simulate emergency: pause all normal operations
         vm.startPrank(owner);
         vault.pause();
         vm.stopPrank();
 
-        // Emergency withdraw should still work when paused
+        // Execute: emergency withdrawal should bypass pause
         vm.startPrank(testUser);
         uint256 assetsReceived = vault.emergencyWithdraw(shares, testUser);
         vm.stopPrank();
 
-        assertGt(assetsReceived, 0, "Emergency withdraw should work when paused");
-        assertEq(vault.balanceOf(testUser), 0, "Should have no shares left");
+        // Validate: successful emergency exit despite pause
+        assertGt(assetsReceived, 0, "Emergency withdrawal must work during pause");
+        assertEq(vault.balanceOf(testUser), 0, "Emergency exit incomplete");
     }
 
     // ========== ADMIN FUNCTIONS TESTS ==========
@@ -368,50 +511,87 @@ contract RiseFiVaultOptimizedTest is Test {
         vm.stopPrank();
     }
 
-    // ========== CUSTOM ERRORS TESTS ==========
+    // ========== CUSTOM ERROR VALIDATION ==========
 
+    /**
+     * @notice Test InsufficientDeposit error with amount below minimum
+     * @dev Validates minimum deposit enforcement for economic viability
+     *      MIN_DEPOSIT prevents dust attacks and ensures meaningful positions
+     */
     function test_Optimized_CustomErrors_InsufficientDeposit() public {
-        _fundUser(testUser, 100); // Less than MIN_DEPOSIT (1e6)
+        // Setup: fund user with amount below minimum (1 USDC)
+        _fundUser(testUser, 100); // 0.0001 USDC (100 units of 6-decimal token)
 
         vm.startPrank(testUser);
         USDC.approve(address(vault), 100);
 
-        vm.expectRevert(abi.encodeWithSelector(RiseFiVault.InsufficientDeposit.selector, 100, 1e6));
+        // Attempt deposit below minimum - should revert with specific error
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                RiseFiVault.InsufficientDeposit.selector,
+                100,
+                1e6 // MIN_DEPOSIT = 1 USDC
+            )
+        );
         vault.deposit(100, testUser);
         vm.stopPrank();
     }
 
+    /**
+     * @notice Test InvalidAsset error during vault construction
+     * @dev Validates asset compatibility checking at deployment
+     *      Prevents deployment with incompatible underlying assets
+     */
     function test_Optimized_CustomErrors_InvalidAsset() public {
-        // Try to deploy with wrong asset
+        // Attempt deployment with incompatible asset
         address wrongAsset = address(0x1234);
 
         vm.expectRevert(abi.encodeWithSelector(RiseFiVault.InvalidAsset.selector, wrongAsset, address(USDC)));
         new RiseFiVault(IERC20(wrongAsset), MORPHO_VAULT_ADDRESS);
     }
 
-    // ========== UTILITY FUNCTIONS TESTS ==========
+    // ========== UTILITY FUNCTION VALIDATION ==========
 
+    /**
+     * @notice Test slippage tolerance configuration
+     * @dev Validates hardcoded slippage tolerance for consistent user protection
+     *      100 basis points (1%) provides balance between protection and usability
+     */
     function test_Optimized_GetSlippageTolerance() public view {
         uint256 slippageTolerance = vault.getSlippageTolerance();
-        assertEq(slippageTolerance, 100, "Should return 100 basis points (1%)");
+        assertEq(slippageTolerance, 100, "Slippage tolerance must be 100 basis points (1%)");
     }
 
+    /**
+     * @notice Test slippage validation logic with various scenarios
+     * @dev Critical for protecting users from excessive slippage during redemptions
+     *      Tests boundary conditions and edge cases for robust validation
+     */
     function test_Optimized_IsSlippageAcceptable() public view {
-        // Test avec slippage acceptable
+        // Test: acceptable slippage (exactly at 1% threshold)
         bool isAcceptable = vault.isSlippageAcceptable(1000, 990); // 1% slippage
-        assertTrue(isAcceptable, "1% slippage should be acceptable");
+        assertTrue(isAcceptable, "1% slippage must be acceptable");
 
-        // Test avec slippage inacceptable
+        // Test: unacceptable slippage (exceeds 1% threshold)
         bool isUnacceptable = vault.isSlippageAcceptable(1000, 980); // 2% slippage
-        assertFalse(isUnacceptable, "2% slippage should not be acceptable");
+        assertFalse(isUnacceptable, "2% slippage must be rejected");
 
-        // Test avec expected à zéro
+        // Test: edge case with zero expected value
         bool isZeroExpected = vault.isSlippageAcceptable(0, 0);
-        assertTrue(isZeroExpected, "Zero expected should be acceptable with zero actual");
+        assertTrue(isZeroExpected, "Zero expected with zero actual must be acceptable");
+
+        // Test: perfect execution (no slippage)
+        bool isPerfect = vault.isSlippageAcceptable(1000, 1000);
+        assertTrue(isPerfect, "Perfect execution must be acceptable");
     }
 
-    // ========== EDGE CASES TESTS ==========
+    // ========== BOUNDARY CONDITION TESTING ==========
 
+    /**
+     * @notice Test redemption with zero shares
+     * @dev Edge case validation - ensures graceful handling of zero inputs
+     *      Prevents gas waste and maintains function robustness
+     */
     function test_Optimized_Redeem_ZeroShares() public {
         _depositForUser(testUser, AMOUNT);
         uint256 balanceBefore = USDC.balanceOf(testUser);
@@ -420,15 +600,20 @@ contract RiseFiVaultOptimizedTest is Test {
         uint256 assetsReceived = vault.redeem(0, testUser, testUser);
         vm.stopPrank();
 
-        assertEq(assetsReceived, 0, "Should receive 0 assets for 0 shares");
-        assertEq(USDC.balanceOf(testUser), balanceBefore, "No USDC should be transferred");
+        assertEq(assetsReceived, 0, "Zero shares must return zero assets");
+        assertEq(USDC.balanceOf(testUser), balanceBefore, "No USDC transfer should occur for zero redemption");
     }
 
+    /**
+     * @notice Test multi-user vault interactions
+     * @dev Validates proper state isolation and proportional share calculations
+     *      Critical for ensuring fair treatment of all vault participants
+     */
     function test_Optimized_MultipleUsers() public {
-        // User1 deposits
+        // Setup: first user deposits standard amount
         uint256 shares1 = _depositForUser(testUser, AMOUNT);
 
-        // User2 deposits
+        // Setup: second user deposits double amount
         uint256 shares2 = _depositForUser(testUser2, AMOUNT * 2);
 
         // User1 redeems half
@@ -441,15 +626,22 @@ contract RiseFiVaultOptimizedTest is Test {
         vault.redeem(shares2, testUser2, testUser2);
         vm.stopPrank();
 
-        // Verify states
-        assertEq(vault.balanceOf(testUser), shares1 / 2, "User1 should have half shares");
-        assertEq(vault.balanceOf(testUser2), 0, "User2 should have no shares");
+        // Validate: proper state management across multiple users
+        assertEq(vault.balanceOf(testUser), shares1 / 2, "User1 partial redemption failed");
+        assertEq(vault.balanceOf(testUser2), 0, "User2 full redemption failed");
     }
 
-    // ========== FUZZ TESTS ==========
+    // ========== FUZZ TESTING FOR ROBUSTNESS ==========
 
+    /**
+     * @notice Fuzz test deposit-redeem cycle with random amounts
+     * @dev Property-based testing for vault robustness across input ranges
+     *      Validates that deposit-redeem cycles preserve value within tolerance
+     * @param amount Random deposit amount (bounded to reasonable range)
+     */
     function testFuzz_Optimized_Deposit_Redeem(uint256 amount) public {
-        amount = bound(amount, 1 * 10 ** 6, 10000 * 10 ** 6); // 1 to 10k USDC
+        // Bound input to realistic range: 1 to 10,000 USDC
+        amount = bound(amount, 1 * 10 ** 6, 10000 * 10 ** 6);
 
         uint256 shares = _depositForUser(testUser, amount);
 
@@ -457,12 +649,12 @@ contract RiseFiVaultOptimizedTest is Test {
         uint256 assetsReceived = vault.redeem(shares, testUser, testUser);
         vm.stopPrank();
 
-        // Should receive approximately the same amount (minus fees/slippage)
+        // Property: deposit-redeem should preserve value within acceptable tolerance
         assertApproxEqAbs(
             assetsReceived,
             amount,
-            1000, // 1000 wei tolerance (0.001 USDC)
-            "Should receive ~same amount"
+            1000, // 0.001 USDC tolerance for rounding/fees
+            "Deposit-redeem cycle value preservation failed"
         );
     }
 
@@ -483,11 +675,11 @@ contract RiseFiVaultOptimizedTest is Test {
         assertEq(vault.balanceOf(testUser), shares - sharesToRedeem, "Should have remaining shares");
     }
 
-    /// @notice Fuzzing avancé : simule des montants à virgule comme saisis sur le front (ex: 1.123456 USDC)
-    /// Permet de tester la robustesse de la conversion JS -> uint256 et la cohérence des validations min deposit
+    /// @notice Advanced fuzzing: simulates decimal amounts as entered on frontend (e.g., 1.123456 USDC)
+    /// Tests robustness of JS -> uint256 conversion and consistency of min deposit validations
     function testFuzz_DecimalInputs(uint256 base, uint256 fraction) public {
-        base = bound(base, 0, 10000); // 0 à 10 000 USDC
-        fraction = bound(fraction, 0, 999_999); // 6 décimales max (USDC)
+        base = bound(base, 0, 10000); // 0 to 10,000 USDC
+        fraction = bound(fraction, 0, 999_999); // 6 decimals max (USDC)
 
         // Simule un input utilisateur : base.fraction USDC
         uint256 amount = base * 1e6 + fraction; // Ex: 1.123456 USDC => 1_123_456
@@ -506,7 +698,7 @@ contract RiseFiVaultOptimizedTest is Test {
             assertGt(shares, 0, "Should receive shares");
             // Test redeem
             uint256 assetsReceived = vault.redeem(shares, testUser, testUser);
-            // On doit récupérer ~le même montant (tolérance 1e3 = 0.001 USDC)
+            // Should recover ~the same amount (tolerance 1e3 = 0.001 USDC)
             assertApproxEqAbs(assetsReceived, amount, 1e3, "Should receive ~same amount");
         }
         vm.stopPrank();

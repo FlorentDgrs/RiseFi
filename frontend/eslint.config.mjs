@@ -11,7 +11,7 @@ const compat = new FlatCompat({
 
 const eslintConfig = [
   {
-    ignores: ["**/node_modules/**", "**/.next/**", "**/public/**"],
+    ignores: ["**/node_modules/**", "**/.next/**", "**/public/**", "**/out/**"],
     settings: {
       "import/resolver": {
         typescript: {

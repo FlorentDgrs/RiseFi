@@ -35,20 +35,18 @@ const rainbowKitAnvilChain = {
   testnet: true,
 };
 
-// Configuration pour développement local
-// Note: Les erreurs WalletConnect 403 et Reown analytics sont normales en développement
-// et n'affectent pas les transactions - elles peuvent être ignorées
+// Configuration for local development
 const config = getDefaultConfig({
   appName: "RiseFi",
-  projectId: "00000000000000000000000000000000", // ProjectId factice
+  projectId: "79baaa61aacc8a01e2d6f0fb66c30898", // ProjectId factice
   chains: [rainbowKitAnvilChain],
   transports: {
     [anvilChain.id]: http("http://127.0.0.1:8545"),
   },
-  ssr: false, // Désactiver SSR pour éviter les erreurs IndexedDB
+  ssr: false, // Disable SSR to avoid IndexedDB errors
 });
 
-// Configuration du QueryClient avec gestion d'erreurs
+// QueryClient configuration with error handling
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
