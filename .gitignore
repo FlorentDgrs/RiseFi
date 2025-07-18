@@ -1,4 +1,6 @@
+# Ignore all lib/ folders except frontend/lib/
 lib/
+!frontend/lib/
 out/
 cache/
 artifacts/
