@@ -27,8 +27,8 @@ jobs:
       - name: Verify required files
         run: |
           echo "Checking for required files..."
-          ls -la frontend/lib/utils.ts
-          ls -la frontend/utils/generated-abi.ts
+          ls -la lib/utils.ts
+          ls -la utils/generated-abi.ts
           echo "All required files present!"
       - name: Lint
         run: npm run lint
