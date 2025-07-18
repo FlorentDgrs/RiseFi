@@ -1,7 +1,10 @@
 "use client";
 import Header from "@/components/shared/Header";
 import Footer from "@/components/shared/Footer";
-import ActionCard from "@/components/shared/ActionCard";
+import DepositCard from "@/components/shared/DepositCard";
+import WithdrawCard from "@/components/shared/WithdrawCard";
+// import YieldTracker from "@/components/shared/YieldTracker";
+// import RealYieldTracker from "@/components/shared/RealYieldTracker";
 import { useVaultUserStats } from "@/utils/hooks/useVaultUserStats";
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
@@ -28,7 +31,6 @@ export default function Dashboard() {
   const [apy, setApy] = useState<number | null>(null);
   const [apyLoading, setApyLoading] = useState<boolean>(true);
 
-  // Fetch APY
   useEffect(() => {
     const fetchApy = async () => {
       setApyLoading(true);
@@ -80,12 +82,12 @@ export default function Dashboard() {
           <div className="w-full text-center mb-8">
             <h1 className="text-4xl font-bold text-[#f5c249]">Dashboard</h1>
           </div>
-          {/* Carte unique : Wallet + EasyInvest + Actions */}
+          {/* Carte unique : Wallet + EasyVest + Actions */}
           <div className="w-full max-w-md bg-gray-900/90 rounded-2xl p-8 shadow-xl border border-gray-700 flex flex-col gap-6 mx-auto">
             {/* Strategy header */}
             <div className="flex items-center justify-between">
               <span className="text-gray-200 font-semibold text-lg">
-                Strategy: EasyInvest
+                Strategy: EasyVest
               </span>
               <div className="flex items-center gap-2">
                 <span className="font-mono text-[#f5c249] text-lg font-bold">
@@ -119,17 +121,35 @@ export default function Dashboard() {
                 </Link>
               </div>
             </div>
-            <div className="mb-2">
-              <span className="font-mono text-green-400 text-sm">
-                Invested: {stats.investedAmountStr} USDC
-              </span>
+            {/* Infos wallet/invested compactes */}
+            <div className="flex flex-col gap-0.5">
+              <div className="flex items-baseline gap-1">
+                <span className="text-white text-sm">
+                  Available in your wallet:
+                </span>
+                <span className="font-mono text-[#f5c249] text-sm">
+                  {Number(stats.usdcBalanceStr).toFixed(2)}
+                </span>
+                <span className="text-[#f5c249] text-sm">USDC</span>
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-white text-sm">Invested:</span>
+                <span className="font-mono text-[#f5c249] text-sm">
+                  {stats.investedAmountStr}
+                </span>
+                <span className="text-[#f5c249] text-sm">USDC</span>
+              </div>
             </div>
-            {/* EasyInvest + Actions */}
-            <ActionCard
-              usdcBalanceStr={stats.usdcBalanceStr}
-              maxWithdrawStr={stats.maxWithdrawStr}
-              refetchStats={stats.refetch}
-            />
+            <div className="flex flex-col gap-6">
+              <DepositCard
+                usdcBalanceStr={stats.usdcBalanceStr}
+                refetchStats={stats.refetch}
+              />
+              <WithdrawCard
+                maxWithdrawStr={stats.maxWithdrawStr}
+                refetchStats={stats.refetch}
+              />
+            </div>
           </div>
         </div>
       </main>

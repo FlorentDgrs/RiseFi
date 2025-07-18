@@ -17,13 +17,13 @@ Smart contracts for the **RiseFi** DeFi yield vault platform, built with Foundry
 - ✅ **Inflation attack protection** with dead shares mechanism
 - ✅ **Slippage protection** for secure withdrawals
 - ✅ **Gas optimized** with professional patterns
-- ✅ **Comprehensive testing** with 35 tests
+- ✅ **Comprehensive testing** with 86+ tests and high coverage
 
 ### Key Features
 
 - **Morpho Integration**: Direct integration with Morpho vaults on Base network
 - **Dead Shares Protection**: 1000 dead shares prevent inflation attacks
-- **Slippage Tolerance**: 2-wei tolerance for withdrawal safety
+- **Slippage Tolerance**: 1% tolerance for withdrawal safety
 - **ERC-4626 Compliance**: Full standard compliance with proper rounding
 - **Professional Documentation**: Complete NatSpec documentation in English
 
@@ -114,8 +114,14 @@ cd RiseFi && ./scripts/stop-all.sh
 
 ### **Solidity (RiseFi/script/)**
 
-- **`DeployVault.s.sol`** : Déploiement du vault RiseFi
+- **`DeployVault.s.sol`** : Déploiement du vault RiseFi (compatible avec la dernière version du contrat)
 - **`FundTestWallets.s.sol`** : Financement des wallets de test
+
+#### Exemple d'utilisation du script de déploiement avec Foundry
+
+```bash
+forge script script/DeployVault.s.sol --rpc-url <URL_RPC> --broadcast --private-key <PRIVATE_KEY>
+```
 
 ## 📊 **Adresses Importantes**
 
@@ -144,15 +150,51 @@ forge build
 ### Test
 
 ```bash
-# Tests unitaires
+# Tests unitaires (86+ tests, coverage >90% lignes/fonctions, ~70% branches)
 forge test
 
 # Tests avec verbosité
 forge test -vvv
 
-# Tests de couverture
-forge coverage
+# Tests de couverture (en ignorant les scripts)
+forge coverage --ignore script/
 ```
+
+#### Couverture actuelle (exemple)
+
+- **Lignes** : >90%
+- **Fonctions** : >90%
+- **Branches** : ~70% (certaines branches catch/erreur sont impossibles à atteindre sur un fork réel)
+
+#### Ignorer les scripts dans la couverture
+
+Ajoutez dans `foundry.toml` :
+
+```toml
+[profile.default]
+ignored = ["script/*"]
+```
+
+Ou utilisez l’option CLI :
+
+```bash
+forge coverage --ignore script/
+```
+
+### Bonnes pratiques tests
+
+- Utilisation systématique de l’impersonation (`vm.startPrank`) pour simuler différents utilisateurs (user, owner, whale, etc.)
+- Tests edge cases (zero address, min/max, slippage, etc.)
+- Fuzzing sur les fonctions critiques
+- Tests de stress (beaucoup de dépôts/retraits)
+- Vérification des événements et des erreurs custom
+- Couverture des branches critiques (slippage, pausable, dead shares, etc.)
+
+### À propos des scripts
+
+- Les scripts de déploiement (`script/DeployVault.s.sol`, etc.) **ne sont pas à tester** : ils servent uniquement à l’automatisation du déploiement et du funding.
+- **Ignorez-les dans la couverture** pour avoir un % coverage représentatif de la sécurité/qualité de vos contrats.
+- Le script `DeployVault.s.sol` est à jour et compatible avec la dernière version du contrat.
 
 ### Déploiement Manuel
 
@@ -200,7 +242,7 @@ RiseFi/
 - **Tokens** : USDC (6 décimales) → rfUSDC (18 décimales)
 - **Sécurité** : Protection contre les attaques d'inflation
 - **Gas** : Optimisé pour les coûts de transaction
-- **Tests** : Couverture complète avec cas limites
+- **Tests** : Couverture complète avec cas limites, fuzz, impersonation, edge cases
 
 ## 🤝 **Contribution**
 

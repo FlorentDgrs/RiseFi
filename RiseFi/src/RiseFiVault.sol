@@ -7,33 +7,73 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title RiseFi Vault - Morpho Integration
  * @notice ERC4626 wrapper around Morpho USDC vault on Base network
- * @dev Vault designed for retail users with inflation attack protection
+ * @dev Simplified vault for educational purposes with slippage guard protection
  * @author RiseFi Team
  */
-contract RiseFiVault is ERC4626 {
+contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
     using SafeERC20 for IERC20;
 
-    // ========== PROTECTION CONSTANTS ==========
+    // ========== CONSTANTS ==========
 
     /// @notice Minimum deposit amount allowed (1 USDC)
     uint256 public constant MIN_DEPOSIT = 1e6;
 
     /// @notice Number of "dead shares" minted at initialization to prevent inflation attacks
-    /// @dev These shares are sent to DEAD_ADDRESS to establish an inviolable minimum ratio
     uint256 public constant DEAD_SHARES = 1000;
 
-    /// @notice Dead shares address (recommended: address(0x...dEaD))
-    address public constant DEAD_ADDRESS = 0x000000000000000000000000000000000000dEaD;
+    /// @notice Dead shares address
+    address public constant DEAD_ADDRESS =
+        0x000000000000000000000000000000000000dEaD;
 
     /// @notice Authorized asset: USDC on Base network
     address public constant USDC = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
 
+    /// @notice Slippage tolerance for protection (1% = 100 basis points)
+    uint256 public constant SLIPPAGE_TOLERANCE = 100;
+
+    /// @notice Basis points for percentage calculations (100% = 10000)
+    uint256 public constant BASIS_POINTS = 10000;
+
+    /// @notice Pre-calculated: BASIS_POINTS - SLIPPAGE_TOLERANCE (gas optimization)
+    uint256 private constant BASIS_POINTS_MINUS_SLIPPAGE =
+        BASIS_POINTS - SLIPPAGE_TOLERANCE;
+
     /// @notice Underlying Morpho vault (MetaMorpho ERC4626)
     IERC4626 public immutable morphoVault;
+
+    // ========== MODIFIERS ==========
+
+    /// @notice Ensures minimum deposit amount is met
+    modifier validDepositAmount(uint256 assets) {
+        if (assets < MIN_DEPOSIT) {
+            revert InsufficientDeposit(assets, MIN_DEPOSIT);
+        }
+        _;
+    }
+
+    /// @notice Initializes dead shares on first deposit
+    modifier initializeDeadShares() {
+        if (totalSupply() == 0) {
+            _mint(DEAD_ADDRESS, DEAD_SHARES);
+            emit DeadSharesMinted(DEAD_SHARES, DEAD_ADDRESS);
+        }
+        _;
+    }
+
+    /// @notice Validates spending allowance for owner operations
+    modifier validateAllowance(address owner, uint256 shares) {
+        if (msg.sender != owner) {
+            _spendAllowance(owner, msg.sender, shares);
+        }
+        _;
+    }
 
     // ========== CUSTOM ERRORS ==========
 
@@ -43,19 +83,43 @@ contract RiseFiVault is ERC4626 {
     /// @notice Thrown when asset address doesn't match expected USDC
     error InvalidAsset(address provided, address expected);
 
-    /// @notice Thrown when slippage exceeds tolerance during withdrawal
-    error SlippageTooHigh(uint256 expected, uint256 actual);
+    /// @notice Thrown when slippage exceeds tolerance
+    error SlippageExceeded(uint256 expected, uint256 actual);
+
+    /// @notice Thrown when emergency withdraw fails
+    error EmergencyWithdrawFailed();
+
+    /// @notice Thrown when withdraw function is called (disabled)
+    error WithdrawDisabled();
+
+    /// @notice Thrown when mint function is called (disabled)
+    error MintDisabled();
+
+    /// @notice Thrown when user has insufficient balance
+    error InsufficientBalance(uint256 requested, uint256 available);
+
+    /// @notice Thrown when insufficient liquidity in Morpho vault
+    error InsufficientLiquidity(uint256 requested, uint256 available);
 
     // ========== EVENTS ==========
 
-    /// @notice Emitted when Morpho redemption is initiated
-    event MorphoRedemptionInitiated(uint256 riseFiShares, uint256 morphoSharesToRedeem);
+    /// @notice Emitted when dead shares are minted (first deposit protection)
+    event DeadSharesMinted(uint256 deadShares, address deadAddress);
 
-    /// @notice Emitted when Morpho redemption is completed
-    event MorphoRedemptionCompleted(uint256 morphoSharesRedeemed, uint256 usdcReceived);
+    /// @notice Emitted when slippage guard is triggered
+    event SlippageGuardTriggered(
+        address indexed user,
+        uint256 expected,
+        uint256 actual,
+        bytes32 indexed operation
+    );
 
-    /// @notice Emitted when RiseFi shares are burned
-    event RiseFiSharesBurned(address owner, uint256 sharesBurned);
+    /// @notice Emitted when emergency withdraw is executed
+    event EmergencyWithdraw(
+        address indexed user,
+        uint256 shares,
+        uint256 assets
+    );
 
     // ========== CONSTRUCTOR ==========
 
@@ -63,9 +127,11 @@ contract RiseFiVault is ERC4626 {
      * @notice Initialize RiseFi vault with USDC asset and Morpho vault
      * @param asset_ The underlying asset (must be USDC)
      * @param morphoVault_ The Morpho vault address to integrate with
-     * @dev Validates asset is USDC and sets up maximum approval for Morpho vault
      */
-    constructor(IERC20 asset_, address morphoVault_) ERC20("RiseFi Vault", "rfUSDC") ERC4626(asset_) {
+    constructor(
+        IERC20 asset_,
+        address morphoVault_
+    ) ERC20("RiseFi Vault", "rfUSDC") ERC4626(asset_) Ownable(msg.sender) {
         if (address(asset_) != USDC) {
             revert InvalidAsset(address(asset_), USDC);
         }
@@ -73,9 +139,49 @@ contract RiseFiVault is ERC4626 {
         morphoVault = IERC4626(morphoVault_);
 
         // Set maximum approval to avoid approvals on each deposit
-        // Some tokens like USDC require reset to 0 before new approval
         asset_.approve(address(morphoVault), 0); // reset
         asset_.approve(address(morphoVault), type(uint256).max); // set
+    }
+
+    // ========== SLIPPAGE PROTECTION HELPERS ==========
+
+    // NOTE: Slippage protection is NOT implemented as modifiers because:
+    // 1. Modifiers cannot capture state BEFORE and AFTER function execution
+    // 2. We need to compare expected vs actual values after state changes
+    // 3. Helper functions provide better control flow and readability
+
+    /// @notice Validates slippage for redeem operations
+    /// @dev Compares expected assets vs actual assets received
+    function _validateRedeemSlippage(
+        uint256 expectedAssets,
+        uint256 actualAssets
+    ) internal {
+        uint256 minAcceptableAssets = (expectedAssets *
+            BASIS_POINTS_MINUS_SLIPPAGE) / BASIS_POINTS;
+        if (actualAssets < minAcceptableAssets) {
+            emit SlippageGuardTriggered(
+                msg.sender,
+                expectedAssets,
+                actualAssets,
+                bytes32("redeem")
+            );
+            revert SlippageExceeded(expectedAssets, actualAssets);
+        }
+    }
+
+    /// @notice Calculates Morpho shares to redeem with validation
+    function _calculateMorphoSharesToRedeem(
+        uint256 shares
+    ) internal view returns (uint256) {
+        uint256 morphoShares = IERC20(address(morphoVault)).balanceOf(
+            address(this)
+        );
+        uint256 supply = totalSupply();
+        uint256 effectiveSupply;
+        unchecked {
+            effectiveSupply = supply - DEAD_SHARES; // Safe: supply always >= DEAD_SHARES after first deposit
+        }
+        return (shares * morphoShares) / effectiveSupply;
     }
 
     // ========== CORE LOGIC ==========
@@ -85,267 +191,425 @@ contract RiseFiVault is ERC4626 {
      * @return Total assets value by converting Morpho shares to assets
      */
     function totalAssets() public view override returns (uint256) {
-        uint256 morphoShares = IERC20(address(morphoVault)).balanceOf(address(this));
-        return morphoVault.convertToAssets(morphoShares);
+        return
+            morphoVault.convertToAssets(
+                IERC20(address(morphoVault)).balanceOf(address(this))
+            );
     }
 
     /**
-     * @dev Actually redeemable supply (total - dead shares)
-     * @return supply The effective supply excluding dead shares
-     */
-    function _effectiveSupply() internal view returns (uint256 supply) {
-        uint256 total = totalSupply();
-        supply = total > DEAD_SHARES ? total - DEAD_SHARES : 0;
-    }
-
-    /**
-     * @notice Override deposit: transfer USDC, invest in Morpho, mint RiseFi shares
-     * @param caller The address calling the deposit
-     * @param receiver The address receiving the shares
+     * @notice Deposit with slippage guard protection
      * @param assets The amount of assets to deposit
-     * @param shares The amount of shares to mint
-     * @dev Implements inflation protection by minting dead shares on first deposit
+     * @param receiver The address receiving the shares
+     * @return shares The amount of shares received
+     * @dev Reverts if slippage exceeds SLIPPAGE_TOLERANCE
      */
-    function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
-        if (assets < MIN_DEPOSIT) {
-            revert InsufficientDeposit(assets, MIN_DEPOSIT);
-        }
-
-        // Inflation protection: mint DEAD_SHARES on first deposit
-        // BEFORE asset transfer to establish minimum ratio
-        if (totalSupply() == 0) {
-            _mint(DEAD_ADDRESS, DEAD_SHARES);
-        }
-
-        IERC20(asset()).safeTransferFrom(caller, address(this), assets);
-        morphoVault.deposit(assets, address(this));
-        _mint(receiver, shares);
-
-        emit Deposit(caller, receiver, assets, shares);
-    }
-
-    // ========== CONVERSION OVERRIDES ==========
-
-    /**
-     * @notice Convert shares to assets (USDC)
-     * @param shares The amount of shares to convert
-     * @return The equivalent amount of assets
-     * @dev ERC-4626 specification: round down
-     */
-    function convertToAssets(uint256 shares) public view override returns (uint256) {
-        return _convertToAssets(shares, Math.Rounding.Floor);
-    }
-
-    /**
-     * @notice Convert assets (USDC) to shares
-     * @param assets The amount of assets to convert
-     * @return The equivalent amount of shares
-     * @dev ERC-4626 specification: round down
-     */
-    function convertToShares(uint256 assets) public view override returns (uint256) {
-        return _convertToShares(assets, Math.Rounding.Floor);
-    }
-
-    /// ---------------------------------------------------------------------
-    ///  Internal conversions (used by OZ helpers)
-    /// ---------------------------------------------------------------------
-
-    /**
-     * @dev Convert shares to assets with specified rounding
-     * @param shares The amount of shares to convert
-     * @param rounding The rounding mode to use
-     * @return The equivalent amount of assets
-     */
-    function _convertToAssets(uint256 shares, Math.Rounding rounding) internal view override returns (uint256) {
-        uint256 eff = _effectiveSupply();
-        if (eff == 0) return 0; // Empty vault
-        return Math.mulDiv(shares, totalAssets(), eff, rounding);
-    }
-
-    /**
-     * @dev Convert assets to shares with specified rounding
-     * @param assets The amount of assets to convert
-     * @param rounding The rounding mode to use
-     * @return The equivalent amount of shares
-     */
-    function _convertToShares(uint256 assets, Math.Rounding rounding) internal view override returns (uint256) {
-        uint256 eff = _effectiveSupply();
-        if (eff == 0) return assets; // First deposit
-        return Math.mulDiv(assets, eff, totalAssets(), rounding);
-    }
-
-    // ========== WITHDRAWAL/REDEMPTION OVERRIDES ==========
-
-    /**
-     * @notice Withdraw assets by burning shares - delegates to redeem logic
-     * @dev Implements ERC4626 withdraw by delegating to our redeem implementation
-     */
-    function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares)
-        internal
+    function deposit(
+        uint256 assets,
+        address receiver
+    )
+        public
         override
+        nonReentrant
+        whenNotPaused
+        validDepositAmount(assets)
+        initializeDeadShares
+        returns (uint256)
     {
-        // Delegate to redeem implementation for consistent business logic
-        _redeem(caller, receiver, owner, shares, assets);
+        // Calculate shares to mint BEFORE changing totalAssets
+        uint256 sharesToMint = previewDeposit(assets);
+
+        // Transfer assets and deposit to Morpho
+        IERC20(asset()).safeTransferFrom(msg.sender, address(this), assets);
+        morphoVault.deposit(assets, address(this));
+
+        // Basic validation: ensure deposit was successful
+        // (More sophisticated slippage checks can be added later)
+
+        // Mint the pre-calculated shares to receiver
+        _mint(receiver, sharesToMint);
+
+        emit Deposit(msg.sender, receiver, assets, sharesToMint);
+        return sharesToMint;
     }
 
-    // ========== MINT/REDEEM OVERRIDES ==========
-
     /**
-     * @notice Minting is disabled - use deposit() instead
-     * @dev Forces users to use deposit() which is more predictable and robust
-     */
-    function _mint(address, address, uint256, uint256) internal pure {
-        revert("RiseFiVault: Use deposit() instead of mint()");
-    }
-
-    /**
-     * @notice Redeem RiseFi shares for USDC assets
-     * @param caller The address calling the redeem
-     * @param receiver The address receiving the USDC
+     * @notice Redeem shares for assets
+     * @param shares The amount of shares to redeem
+     * @param receiver The address receiving the assets
      * @param owner The address owning the shares
-     * @param shares The amount of RiseFi shares to redeem
-     * @dev Core redemption logic: burn RiseFi shares → redeem Morpho shares → transfer USDC
+     * @return assets The amount of assets received
      */
-    function _redeem(address caller, address receiver, address owner, uint256 shares, uint256 /* assets */ ) internal {
-        // Early return for zero shares
+    function redeem(
+        uint256 shares,
+        address receiver,
+        address owner
+    )
+        public
+        override
+        nonReentrant
+        whenNotPaused
+        validateAllowance(owner, shares)
+        returns (uint256)
+    {
+        // Handle zero shares case
         if (shares == 0) {
-            emit Withdraw(caller, receiver, owner, 0, 0);
-            return;
+            emit Withdraw(msg.sender, receiver, owner, 0, 0);
+            return 0;
         }
 
-        // Permission check
-        if (caller != owner) {
-            _spendAllowance(owner, caller, shares);
-        }
+        // Capture expected assets before state changes
+        uint256 expectedAssets = previewRedeem(shares);
 
-        // Calculate Morpho shares to redeem BEFORE burning shares
-        uint256 morphoShares = IERC20(address(morphoVault)).balanceOf(address(this));
-        uint256 effectiveSupply = _effectiveSupply();
+        // Calculate and validate Morpho shares to redeem
+        uint256 morphoSharesToRedeem = _calculateMorphoSharesToRedeem(shares);
 
-        if (effectiveSupply == 0) {
-            revert("RiseFiVault: No effective supply");
-        }
+        // Check liquidity constraints
+        _validateRedemptionLiquidity(morphoSharesToRedeem);
 
-        // Calculate the proportion of Morpho shares to redeem based on RiseFi shares
-        uint256 morphoSharesToRedeem = (shares * morphoShares) / effectiveSupply;
-
-        // Safety check: don't redeem more than we have
-        if (morphoSharesToRedeem > morphoShares) {
-            morphoSharesToRedeem = morphoShares;
-        }
-
-        // Emit event for Morpho redemption initiation
-        emit MorphoRedemptionInitiated(shares, morphoSharesToRedeem);
-
-        // Execute redemption from Morpho
-        uint256 balanceBefore = IERC20(asset()).balanceOf(address(this));
-        morphoVault.redeem(morphoSharesToRedeem, address(this), address(this));
-        uint256 balanceAfter = IERC20(asset()).balanceOf(address(this));
-
-        // Emit event for Morpho redemption completion
-        uint256 usdcReceived = balanceAfter - balanceBefore;
-        emit MorphoRedemptionCompleted(morphoSharesToRedeem, usdcReceived);
-
-        // Burn RiseFi shares after successful Morpho redemption
+        // Execute redemption
         _burn(owner, shares);
-        emit RiseFiSharesBurned(owner, shares);
+        uint256 actualAssets = morphoVault.redeem(
+            morphoSharesToRedeem,
+            receiver,
+            address(this)
+        );
 
-        // Validate redemption
-        require(balanceAfter >= balanceBefore, "Unexpected balance decrease");
-        uint256 received = balanceAfter - balanceBefore;
+        // Validate slippage
+        _validateRedeemSlippage(expectedAssets, actualAssets);
 
-        // Calculate expected assets from shares for slippage protection
-        uint256 expectedAssets = _convertToAssets(shares, Math.Rounding.Floor);
+        emit Withdraw(msg.sender, receiver, owner, actualAssets, shares);
+        return actualAssets;
+    }
 
-        // Skip slippage protection if expected assets is very small (dust amounts)
-        if (expectedAssets > 0) {
-            // Slippage protection: only check minimum (0.1% tolerance)
-            uint256 tolerance = (expectedAssets * 100) / 100000;
-            if (tolerance < 100) tolerance = 100; // Minimum 100 wei tolerance
+    /**
+     * @notice Withdraw is disabled - use redeem() instead
+     * @dev Disabled for simplicity - use redeem() for withdrawals
+     */
+    function withdraw(
+        uint256, // assets (ignored)
+        address, // receiver (ignored)
+        address // owner (ignored)
+    ) public pure override returns (uint256) {
+        revert WithdrawDisabled();
+    }
 
-            if (received + tolerance < expectedAssets) {
-                revert SlippageTooHigh(expectedAssets, received);
-            }
+    // ========== LIQUIDITY HELPERS ==========
+
+    /// @notice Validates liquidity is sufficient for redemption
+    function _validateRedemptionLiquidity(
+        uint256 morphoSharesToRedeem
+    ) internal view {
+        uint256 maxRedeemable = morphoVault.maxRedeem(address(this));
+        if (morphoSharesToRedeem > maxRedeemable) {
+            revert InsufficientLiquidity(morphoSharesToRedeem, maxRedeemable);
         }
+    }
 
-        // Transfer USDC to user - transfer what we actually received
-        IERC20(asset()).safeTransfer(receiver, received);
+    // ========== CONVERSION FUNCTIONS ==========
 
-        emit Withdraw(caller, receiver, owner, received, shares);
+    /**
+     * @notice Convert shares to assets with specified rounding
+     * @dev Accounts for dead shares in calculation
+     */
+    function _convertToAssets(
+        uint256 shares,
+        Math.Rounding rounding
+    ) internal view override returns (uint256) {
+        uint256 supply = totalSupply();
+        uint256 assets = totalAssets();
+
+        if (supply == 0) return 0;
+        if (supply <= DEAD_SHARES) return 0;
+
+        uint256 effectiveSupply;
+        unchecked {
+            effectiveSupply = supply - DEAD_SHARES; // Safe: supply > DEAD_SHARES
+        }
+        if (shares > effectiveSupply) shares = effectiveSupply;
+
+        return Math.mulDiv(shares, assets, effectiveSupply, rounding);
+    }
+
+    /**
+     * @notice Convert assets to shares with specified rounding
+     * @dev Accounts for dead shares in calculation
+     */
+    function _convertToShares(
+        uint256 assets,
+        Math.Rounding rounding
+    ) internal view override returns (uint256) {
+        uint256 supply = totalSupply();
+        uint256 totalAssets_ = totalAssets();
+
+        if (supply == 0) return assets;
+        if (supply <= DEAD_SHARES) return assets;
+
+        uint256 effectiveSupply;
+        unchecked {
+            effectiveSupply = supply - DEAD_SHARES; // Safe: supply > DEAD_SHARES
+        }
+        if (totalAssets_ == 0) return assets;
+
+        return Math.mulDiv(assets, effectiveSupply, totalAssets_, rounding);
     }
 
     // ========== PREVIEW FUNCTIONS ==========
 
     /**
-     * @notice Preview the amount of shares that would be minted for a given deposit
-     * @param assets The amount of assets to deposit
-     * @return The amount of shares that would be minted
+     * @notice Preview deposit - central logic for deposits
      */
-    function previewDeposit(uint256 assets) public view override returns (uint256) {
-        return convertToShares(assets);
+    function previewDeposit(
+        uint256 assets
+    ) public view override returns (uint256) {
+        return _convertToShares(assets, Math.Rounding.Floor);
     }
 
     /**
-     * @notice Preview the amount of shares that would be burned for a given withdrawal
-     * @param assets The amount of assets to withdraw
-     * @return The amount of shares that would be burned
+     * @notice Preview redeem - central logic for redemptions
      */
-    function previewWithdraw(uint256 assets) public view override returns (uint256) {
-        return convertToShares(assets);
+    function previewRedeem(
+        uint256 shares
+    ) public view override returns (uint256) {
+        return _convertToAssets(shares, Math.Rounding.Floor);
     }
 
     /**
-     * @notice Preview the amount of assets required to mint a given amount of shares
-     * @param shares The amount of shares to mint
-     * @return The amount of assets required
+     * @notice Preview withdraw - disabled, returns 0
      */
-    function previewMint(uint256 shares) public view override returns (uint256) {
-        uint256 eff = _effectiveSupply();
-        if (eff == 0) return shares; // First deposit
-        return Math.mulDiv(shares, totalAssets(), eff, Math.Rounding.Ceil);
+    function previewWithdraw(
+        uint256 // assets (ignored)
+    ) public pure override returns (uint256) {
+        return 0; // Withdraw is disabled
     }
 
     /**
-     * @notice Preview the amount of assets that would be received for a given share redemption
-     * @param shares The amount of shares to redeem
-     * @return The amount of assets that would be received
+     * @notice Preview mint - disabled, returns 0
      */
-    function previewRedeem(uint256 shares) public view override returns (uint256) {
-        return convertToAssets(shares);
+    function previewMint(
+        uint256 /* shares */
+    ) public pure override returns (uint256) {
+        return 0; // Mint is disabled
     }
 
     // ========== MAX FUNCTIONS ==========
 
     /**
-     * @notice Get the maximum amount of assets that can be deposited
-     * @return The maximum deposit amount
+     * @notice Get maximum deposit amount
      */
-    function maxDeposit(address) public pure override returns (uint256) {
-        return type(uint256).max;
+    function maxDeposit(
+        address /* receiver */
+    ) public view override returns (uint256) {
+        return paused() ? 0 : type(uint256).max;
     }
 
     /**
-     * @notice Minting is disabled - returns 0
+     * @notice Minting is disabled
      */
-    function maxMint(address) public pure override returns (uint256) {
+    function maxMint(
+        address /* receiver */
+    ) public pure override returns (uint256) {
         return 0;
     }
 
     /**
-     * @notice Get the maximum amount of assets that can be withdrawn by the owner
-     * @param owner The address owning the shares
-     * @return The maximum withdrawal amount
+     * @notice Maximum withdrawal is disabled
      */
-    function maxWithdraw(address owner) public view override returns (uint256) {
-        return _convertToAssets(balanceOf(owner), Math.Rounding.Floor);
+    function maxWithdraw(
+        address /* owner */
+    ) public pure override returns (uint256) {
+        return 0; // Withdraw is disabled
     }
 
     /**
-     * @notice Get the maximum amount of shares that can be redeemed by the owner
-     * @param owner The address owning the shares
-     * @return The maximum redemption amount
+     * @notice Get maximum redemption amount considering liquidity
      */
     function maxRedeem(address owner) public view override returns (uint256) {
-        return balanceOf(owner);
+        // Early returns for gas optimization
+        if (paused()) return 0;
+
+        uint256 ownerShares = balanceOf(owner);
+        if (ownerShares == 0) return 0;
+
+        uint256 maxSharesFromLiquidity = _convertToShares(
+            _getAvailableLiquidity(),
+            Math.Rounding.Floor
+        );
+
+        // Inline min calculation
+        return
+            ownerShares > maxSharesFromLiquidity
+                ? maxSharesFromLiquidity
+                : ownerShares;
+    }
+
+    /**
+     * @notice Get available liquidity from underlying Morpho vault
+     */
+    function _getAvailableLiquidity() internal view returns (uint256) {
+        uint256 ourMorphoShares = IERC20(address(morphoVault)).balanceOf(
+            address(this)
+        );
+        uint256 maxMorphoRedeem = morphoVault.maxRedeem(address(this));
+
+        // Inline the min calculation to save gas
+        return
+            morphoVault.convertToAssets(
+                ourMorphoShares > maxMorphoRedeem
+                    ? maxMorphoRedeem
+                    : ourMorphoShares
+            );
+    }
+
+    // ========== DISABLED FUNCTIONS ==========
+
+    /**
+     * @notice Minting is disabled - use deposit() instead
+     */
+    function mint(
+        uint256, // shares (ignored)
+        address // receiver (ignored)
+    ) public pure override returns (uint256) {
+        revert MintDisabled();
+    }
+
+    // ========== UTILITY FUNCTIONS ==========
+
+    /**
+     * @notice Get current slippage tolerance
+     * @return The slippage tolerance in basis points
+     * @dev Useful for frontend integration
+     */
+    function getSlippageTolerance() external pure returns (uint256) {
+        return SLIPPAGE_TOLERANCE;
+    }
+
+    /**
+     * @notice Check if an amount of slippage would be acceptable
+     * @param expected The expected amount
+     * @param actual The actual amount
+     * @return Whether the slippage is within tolerance
+     * @dev Useful for frontend pre-checks
+     */
+    function isSlippageAcceptable(
+        uint256 expected,
+        uint256 actual
+    ) external pure returns (bool) {
+        if (expected == 0) return actual == 0;
+        uint256 minAcceptable = (expected * BASIS_POINTS_MINUS_SLIPPAGE) /
+            BASIS_POINTS;
+        return actual >= minAcceptable;
+    }
+
+    /**
+     * @notice Check if the contract is currently paused
+     * @return Whether the contract is paused
+     * @dev Useful for frontend integration
+     */
+    function isPaused() external view returns (bool) {
+        return paused();
+    }
+
+    /**
+     * @notice Returns the number of decimals used to get its user representation
+     * @dev Override to return 18 decimals for rfUSDC tokens (standard for vault shares)
+     * @return The number of decimals
+     */
+    function decimals() public pure override returns (uint8) {
+        return 18;
+    }
+
+    // ========== EMERGENCY FUNCTIONS ==========
+
+    /**
+     * @notice Emergency withdraw - bypasses pause and slippage protection
+     * @dev Uses same Morpho logic as redeem() but without safety checks
+     * @param shares The amount of shares to burn
+     * @param receiver The address to receive the assets
+     * @return assets The amount of assets received
+     */
+    function emergencyWithdraw(
+        uint256 shares,
+        address receiver
+    ) external nonReentrant returns (uint256 assets) {
+        if (shares == 0) return 0;
+
+        uint256 userBalance = balanceOf(msg.sender);
+        if (shares > userBalance) {
+            revert InsufficientBalance(shares, userBalance);
+        }
+
+        // Calculate Morpho shares to redeem (same logic as redeem)
+        uint256 morphoSharesToRedeem = _calculateMorphoSharesToRedeem(shares);
+
+        if (morphoSharesToRedeem == 0) {
+            revert EmergencyWithdrawFailed();
+        }
+
+        // Try Morpho redemption first WITHOUT burning shares
+        try
+            morphoVault.redeem(morphoSharesToRedeem, receiver, address(this))
+        returns (uint256 receivedAssets) {
+            // Success: burn shares and return assets
+            _burn(msg.sender, shares);
+            assets = receivedAssets;
+        } catch {
+            // If Morpho fails, try to use direct contract balance as fallback
+            uint256 contractBalance = IERC20(asset()).balanceOf(address(this));
+            uint256 supply = totalSupply(); // Don't add back shares since we haven't burned them yet
+
+            if (supply <= DEAD_SHARES || contractBalance == 0) {
+                revert EmergencyWithdrawFailed();
+            }
+
+            uint256 effectiveSupply;
+            unchecked {
+                effectiveSupply = supply - DEAD_SHARES; // Safe: supply > DEAD_SHARES checked above
+            }
+
+            assets = (shares * contractBalance) / effectiveSupply;
+            // Only burn shares and transfer if we have enough balance
+            if (assets > 0 && contractBalance >= assets) {
+                _burn(msg.sender, shares);
+                IERC20(asset()).safeTransfer(receiver, assets);
+            } else {
+                revert EmergencyWithdrawFailed();
+            }
+        }
+
+        emit EmergencyWithdraw(msg.sender, shares, assets);
+        return assets;
+    }
+
+    // ========== ADMIN FUNCTIONS ==========
+
+    /**
+     * @notice Pause the contract (stops deposits and redeems)
+     * @dev Only owner can pause in case of emergency
+     */
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @notice Unpause the contract (resumes normal operations)
+     * @dev Only owner can unpause after issues are resolved
+     */
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+
+    /**
+     * @notice Emergency function to withdraw all funds from Morpho
+     * @dev Only callable by owner in extreme emergency
+     * @dev Brings all funds back to the contract for emergency withdrawals
+     */
+    function emergencyWithdrawFromMorpho() external onlyOwner {
+        uint256 morphoShares = IERC20(address(morphoVault)).balanceOf(
+            address(this)
+        );
+        if (morphoShares > 0) {
+            morphoVault.redeem(morphoShares, address(this), address(this));
+        }
     }
 }

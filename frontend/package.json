@@ -11,7 +11,9 @@
     "check": "npm run typecheck && npm run lint && npm run build",
     "anvil": "cd ../RiseFi && ./scripts/start-anvil.sh",
     "deploy": "cd ../RiseFi && ./scripts/fund-and-deploy.sh",
-    "stack": "concurrently \"npm run anvil\" \"wait-on http://localhost:8545 && npm run deploy\" \"wait-on http://localhost:8545 && npm run dev\""
+    "stack": "concurrently \"npm run anvil\" \"wait-on http://localhost:8545 && npm run deploy\" \"wait-on http://localhost:8545 && npm run dev\"",
+    "generate-abi": "node scripts/generate-abi.js",
+    "build-contracts": "cd ../RiseFi && forge build --force && cd ../frontend && npm run generate-abi"
   },
   "dependencies": {
     "@morpho-org/blue-sdk": "^4.2.0",

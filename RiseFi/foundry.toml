@@ -18,6 +18,10 @@ runs = 256
 runs = 256
 depth = 15
 
+# --- Optimizer settings for Solidity ---
+optimizer = true
+optimizer_runs = 200
+
 # RPC endpoints configuration
 [rpc_endpoints]
 base_public = "https://mainnet.base.org"           # Public Base RPC

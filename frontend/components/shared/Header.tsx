@@ -1,19 +1,27 @@
 "use client";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAccount } from "wagmi";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const { isConnected } = useAccount();
+
+  // Éviter l'erreur d'hydration en attendant le mount côté client
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const navigation = [
     { name: "Home", href: "/" },
     { name: "Academy", href: "/academy" },
-    ...(isConnected ? [{ name: "Dashboard", href: "/dashboard" }] : []),
+    ...(mounted && isConnected
+      ? [{ name: "Dashboard", href: "/dashboard" }]
+      : []),
   ];
 
   const isActive = (href: string) => {

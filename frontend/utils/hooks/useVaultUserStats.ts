@@ -23,7 +23,7 @@ export function useVaultUserStats() {
       {
         address: CONTRACTS.RISEFI_VAULT,
         abi: ABIS.RISEFI_VAULT,
-        functionName: "maxWithdraw",
+        functionName: "maxRedeem",
         args: address ? [address] : undefined,
       },
     ],
@@ -40,7 +40,7 @@ export function useVaultUserStats() {
   // userShares = rfUSDC balance
   const usdcBalance = data?.[0] ?? BigInt(0);
   const userShares = data?.[1] ?? BigInt(0);
-  const maxWithdraw = data?.[2] ?? BigInt(0);
+  const maxRedeem = data?.[2] ?? BigInt(0);
 
   // Montant investi = convertToAssets(userShares)
   // On lit convertToAssets uniquement si userShares > 0
@@ -71,14 +71,13 @@ export function useVaultUserStats() {
     refetch,
     usdcBalance,
     userShares,
-    maxWithdraw,
-    investedAmount: investedAmount?.[0] ?? BigInt(0),
+    maxRedeem,
+    investedAmount: investedAmount?.[0],
     usdcBalanceStr: formatUnits(usdcBalance, CONSTANTS.USDC_DECIMALS),
     userSharesStr: formatUnits(userShares, CONSTANTS.USDC_DECIMALS),
-    maxWithdrawStr: formatUnits(maxWithdraw, CONSTANTS.USDC_DECIMALS),
-    investedAmountStr: formatUnits(
-      investedAmount?.[0] ?? BigInt(0),
-      CONSTANTS.USDC_DECIMALS
-    ),
+    maxWithdrawStr: formatUnits(maxRedeem, CONSTANTS.USDC_DECIMALS), // Note: maxRedeem donne des shares, pas des assets
+    investedAmountStr: Number(
+      formatUnits(investedAmount?.[0] || BigInt(0), CONSTANTS.USDC_DECIMALS)
+    ).toFixed(2),
   };
 }

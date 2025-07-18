@@ -13,6 +13,7 @@ import { ABIS, CONTRACTS, CONSTANTS } from "@/utils/contracts";
 interface ActionCardProps {
   usdcBalanceStr: string;
   maxWithdrawStr: string;
+  investedAmountStr: string;
   refetchStats: () => void;
 }
 
@@ -24,9 +25,11 @@ const USDC_ABI = ABIS.ERC20;
 export default function ActionCard({
   usdcBalanceStr,
   maxWithdrawStr,
+  investedAmountStr,
   refetchStats,
 }: ActionCardProps) {
   const { address } = useAccount();
+  const [mounted, setMounted] = useState(false);
   const [tab, setTab] = useState<"deposit" | "withdraw">("deposit");
   const [amount, setAmount] = useState("");
   const [status, setStatus] = useState<
@@ -35,34 +38,15 @@ export default function ActionCard({
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>(undefined);
 
-  // Functions to handle MAX button
-  const handleMaxDeposit = () => {
-    const balance = parseFloat(usdcBalanceStr);
-    if (!isNaN(balance) && balance > 0) {
-      setAmount(balance.toString());
-    }
-  };
-
-  const handleMaxWithdraw = () => {
-    const maxWithdraw = parseFloat(maxWithdrawStr);
-    if (!isNaN(maxWithdraw) && maxWithdraw > 0) {
-      setAmount(maxWithdraw.toString());
-    }
-  };
-
-  // Allowance (pour dépôt)
-  const { data: allowance, refetch: refetchAllowance } = useReadContract({
-    address: USDC_ADDRESS,
-    abi: USDC_ABI,
-    functionName: "allowance",
-    args: address ? [address, VAULT_ADDRESS] : undefined,
-    query: { enabled: !!address && tab === "deposit" },
-  });
+  // Éviter l'erreur d'hydration
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Write hooks
   const { writeContract: writeApprove } = useWriteContract();
   const { writeContract: writeDeposit } = useWriteContract();
-  const { writeContract: writeWithdraw } = useWriteContract();
+  const { writeContract: writeRedeem } = useWriteContract();
 
   // Suivi de la confirmation (pour withdraw et deposit)
   const {
@@ -70,7 +54,9 @@ export default function ActionCard({
     isSuccess,
     error: errorConfirmation,
   } = useWaitForTransactionReceipt({
-    hash: txHash as `0x${string}` | undefined,
+    // @ts-ignore - txHash peut être undefined mais query.enabled le gère
+    hash: txHash,
+    query: { enabled: !!txHash },
   });
 
   // Rafraîchir les stats et reset l'input après succès
@@ -87,7 +73,6 @@ export default function ActionCard({
   // Gérer les erreurs de confirmation
   useEffect(() => {
     if (errorConfirmation) {
-      console.log("Transaction failed:", errorConfirmation);
       setStatus("error");
       setError(
         `Transaction failed: ${
@@ -154,20 +139,20 @@ export default function ActionCard({
         setTxHash(undefined);
       }
     } else {
-      // Retrait
+      // Retrait - utilise redeem() au lieu de withdraw()
       try {
         setStatus("withdrawing");
-        const tx = await writeWithdraw({
+        const tx = await writeRedeem({
           address: VAULT_ADDRESS,
           abi: VAULT_ABI,
-          functionName: "withdraw",
+          functionName: "redeem",
           args: [amountBN, address, address],
         });
         setTxHash(typeof tx === "string" ? (tx as `0x${string}`) : undefined);
-        console.log("Withdraw transaction sent:", tx);
+        console.log("Redeem transaction sent:", tx);
         // On attend la confirmation via useWaitForTransactionReceipt
       } catch (e: any) {
-        console.error("Withdraw error:", e);
+        console.error("Redeem error:", e);
         setStatus("error");
         setError(e?.message || "Error during withdrawal");
         setTxHash(undefined);
@@ -175,11 +160,51 @@ export default function ActionCard({
     }
   };
 
+  // Rafraîchir les stats et reset l'input après succès
+  useEffect(() => {
+    if (isSuccess) {
+      refetchStats();
+      setAmount("");
+      setStatus("done");
+      setTxHash(undefined);
+    }
+  }, [isSuccess, refetchStats]);
+
+  // Functions to handle MAX button
+  const handleMaxDeposit = () => {
+    const balance = parseFloat(usdcBalanceStr);
+    if (!isNaN(balance) && balance > 0) {
+      // Tronquer à 2 décimales pour éviter les erreurs de slippage
+      const roundedAmount = Math.floor(balance * 100) / 100;
+      setAmount(roundedAmount.toFixed(2));
+    }
+  };
+
+  const handleMaxWithdraw = () => {
+    const maxWithdraw = parseFloat(maxWithdrawStr);
+    if (!isNaN(maxWithdraw) && maxWithdraw > 0) {
+      // Tronquer à 2 décimales pour éviter les erreurs de slippage
+      const roundedAmount = Math.floor(maxWithdraw * 100) / 100;
+      setAmount(roundedAmount.toFixed(2));
+    } else {
+      setError(`Cannot withdraw: maxWithdraw is ${maxWithdrawStr}`);
+    }
+  };
+
+  // Allowance (pour dépôt)
+  const { data: allowance, refetch: refetchAllowance } = useReadContract({
+    address: USDC_ADDRESS,
+    abi: USDC_ABI,
+    functionName: "allowance",
+    args: address ? [address, VAULT_ADDRESS] : undefined,
+    query: { enabled: !!address && tab === "deposit" },
+  });
+
   const isLoading =
     status === "approving" ||
     status === "depositing" ||
     status === "withdrawing" ||
-    isConfirming;
+    !!isConfirming;
 
   // Reset status to idle after a delay if done
   useEffect(() => {
@@ -205,7 +230,7 @@ export default function ActionCard({
             }
           `}
           onClick={() => setTab("deposit")}
-          disabled={isLoading}
+          disabled={!mounted || isLoading}
         >
           Deposit
         </button>
@@ -218,7 +243,7 @@ export default function ActionCard({
             }
           `}
           onClick={() => setTab("withdraw")}
-          disabled={isLoading}
+          disabled={!mounted || isLoading}
         >
           Withdraw
         </button>
@@ -237,13 +262,13 @@ export default function ActionCard({
             placeholder="100"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            disabled={!address || isLoading}
+            disabled={!mounted || !address || isLoading}
             className="flex-1 bg-gray-900 text-white border border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:border-[#f5c249] transition font-mono [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
           <button
             type="button"
             onClick={tab === "deposit" ? handleMaxDeposit : handleMaxWithdraw}
-            disabled={!address || isLoading}
+            disabled={!mounted || !address || isLoading}
             className="bg-gray-700 hover:bg-gray-600 text-[#f5c249] font-bold py-2 px-3 rounded-lg transition duration-200 disabled:opacity-50"
           >
             MAX
@@ -254,14 +279,27 @@ export default function ActionCard({
           {tab === "deposit" ? (
             <span>
               USDC balance:{" "}
-              <span className="text-[#f5c249]">{usdcBalanceStr}</span>
+              <span className="text-[#f5c249]">
+                {Number(usdcBalanceStr).toFixed(2)}
+              </span>
               <span className="block text-gray-500">Min: &gt; 1 USDC</span>
             </span>
           ) : (
             <span>
               Max withdraw:{" "}
-              <span className="text-[#f5c249]">{maxWithdrawStr}</span>
+              <span className="text-[#f5c249]">
+                {Number(maxWithdrawStr).toFixed(2)}
+              </span>
               <span className="block text-gray-500">Min: &gt; 0.001 USDC</span>
+            </span>
+          )}
+          {/* Affichage du montant investi si disponible */}
+          {typeof investedAmountStr !== "undefined" && (
+            <span>
+              Invested:{" "}
+              <span className="text-[#f5c249]">
+                {Number(investedAmountStr).toFixed(2)} USDC
+              </span>
             </span>
           )}
         </div>
@@ -269,11 +307,16 @@ export default function ActionCard({
         <button
           onClick={handleAction}
           disabled={
+            !mounted ||
             !address ||
             !amount ||
             isLoading ||
-            (tab === "deposit" && Number(amount) <= 1) ||
-            (tab === "withdraw" && Number(amount) <= 0.001)
+            (tab === "deposit" &&
+              (Number(amount) <= 1 ||
+                Number(amount) > parseFloat(usdcBalanceStr))) ||
+            (tab === "withdraw" &&
+              (Number(amount) <= 0.001 ||
+                Number(amount) > parseFloat(maxWithdrawStr)))
           }
           className={`font-bold py-2 rounded-xl transition disabled:opacity-50 mt-2
             ${
