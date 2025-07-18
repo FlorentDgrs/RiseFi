@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {Test} from "forge-std/Test.sol";
-import {console2} from "forge-std/console2.sol";
-import {RiseFiVault} from "../src/RiseFiVault.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import { RiseFiVault } from "../src/RiseFiVault.sol";
+
+import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import { Test } from "forge-std/Test.sol";
+import { console2 } from "forge-std/console2.sol";
 
 /**
  * @title RiseFi Vault Comprehensive Test Suite
@@ -21,6 +22,7 @@ import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
  * @author RiseFi Team
  */
 contract RiseFiVaultOptimizedTest is Test {
+
     // ========== STATE VARIABLES ==========
     RiseFiVault public vault;
 
@@ -639,9 +641,11 @@ contract RiseFiVaultOptimizedTest is Test {
      *      Validates that deposit-redeem cycles preserve value within tolerance
      * @param amount Random deposit amount (bounded to reasonable range)
      */
-    function testFuzz_Optimized_Deposit_Redeem(uint256 amount) public {
+    function testFuzz_Optimized_Deposit_Redeem(
+        uint256 amount
+    ) public {
         // Bound input to realistic range: 1 to 10,000 USDC
-        amount = bound(amount, 1 * 10 ** 6, 10000 * 10 ** 6);
+        amount = bound(amount, 1 * 10 ** 6, 10_000 * 10 ** 6);
 
         uint256 shares = _depositForUser(testUser, amount);
 
@@ -659,7 +663,7 @@ contract RiseFiVaultOptimizedTest is Test {
     }
 
     function testFuzz_Optimized_Partial_Redeem(uint256 amount, uint256 redeemPercent) public {
-        amount = bound(amount, 1 * 10 ** 6, 10000 * 10 ** 6); // 1 to 10k USDC
+        amount = bound(amount, 1 * 10 ** 6, 10_000 * 10 ** 6); // 1 to 10k USDC
         redeemPercent = bound(redeemPercent, 1, 100); // 1% to 100%
 
         uint256 shares = _depositForUser(testUser, amount);
@@ -678,7 +682,7 @@ contract RiseFiVaultOptimizedTest is Test {
     /// @notice Advanced fuzzing: simulates decimal amounts as entered on frontend (e.g., 1.123456 USDC)
     /// Tests robustness of JS -> uint256 conversion and consistency of min deposit validations
     function testFuzz_DecimalInputs(uint256 base, uint256 fraction) public {
-        base = bound(base, 0, 10000); // 0 to 10,000 USDC
+        base = bound(base, 0, 10_000); // 0 to 10,000 USDC
         fraction = bound(fraction, 0, 999_999); // 6 decimals max (USDC)
 
         // Simule un input utilisateur : base.fraction USDC
@@ -743,7 +747,7 @@ contract RiseFiVaultOptimizedTest is Test {
         uint256 gasUsed = gasBefore - gasleft();
 
         console2.log("Gas used for deposit:", gasUsed);
-        assertLt(gasUsed, 300000, "Deposit should use reasonable gas"); // Increased threshold
+        assertLt(gasUsed, 300_000, "Deposit should use reasonable gas"); // Increased threshold
         vm.stopPrank();
     }
 
@@ -756,7 +760,7 @@ contract RiseFiVaultOptimizedTest is Test {
         uint256 gasUsed = gasBefore - gasleft();
 
         console2.log("Gas used for redeem:", gasUsed);
-        assertLt(gasUsed, 300000, "Redeem should use reasonable gas"); // Increased threshold
+        assertLt(gasUsed, 300_000, "Redeem should use reasonable gas"); // Increased threshold
         vm.stopPrank();
     }
 
@@ -1498,7 +1502,7 @@ contract RiseFiVaultOptimizedTest is Test {
         // In normal conditions, slippage protection should not trigger
         // But we can verify the calculation logic
         uint256 slippageTolerance = vault.getSlippageTolerance();
-        uint256 minAcceptable = (expectedAssets * (10000 - slippageTolerance)) / 10000;
+        uint256 minAcceptable = (expectedAssets * (10_000 - slippageTolerance)) / 10_000;
 
         assertGe(actualAssets, minAcceptable, "Should meet slippage tolerance");
     }
@@ -1680,4 +1684,5 @@ contract RiseFiVaultOptimizedTest is Test {
 
         assertGt(newShares, 0, "Should be able to deposit after unpause");
     }
+
 }

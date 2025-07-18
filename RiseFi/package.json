@@ -1,0 +1,90 @@
+{
+  "name": "risefi-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "RiseFi Smart Contracts - DeFi yield vault platform with Morpho Blue integration",
+  "author": "RiseFi Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "scripts": {
+    "build": "forge build",
+    "clean": "forge clean && rm -rf node_modules/.cache",
+    "test": "forge test",
+    "test:verbose": "forge test -vvv",
+    "test:gas": "forge test --gas-report",
+    "test:coverage": "forge coverage --report lcov && genhtml lcov.info -o coverage",
+    "test:watch": "forge test --watch",
+    "test:fuzz": "forge test --fuzz-runs 1000",
+    "test:invariant": "forge test --invariant-runs 256",
+    "test:match": "forge test --match-test",
+    "test:contract": "forge test --match-contract",
+    "test:all": "npm run test && npm run test:coverage && npm run test:gas",
+    "lint": "npm run lint:sol && npm run lint:ts",
+    "lint:sol": "forge fmt --check",
+    "lint:ts": "eslint . --ext .ts,.js --fix",
+    "lint:fix": "forge fmt && npm run lint:ts",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm run lint && npm run build && npm run test",
+    "security": "slither . --config-file slither.config.json",
+    "security:full": "slither . --config-file slither.config.json --print summary",
+    "deploy:local": "./scripts/deploy-complete.sh",
+    "deploy:fast": "./scripts/deploy-fast.sh",
+    "deploy:test": "forge script script/DeployVault.s.sol --rpc-url http://127.0.0.1:8545 --broadcast",
+    "anvil": "./scripts/deploy-complete.sh",
+    "anvil:fast": "./scripts/deploy-fast.sh",
+    "stop": "./scripts/stop-all.sh",
+    "fund": "forge script script/FundTestWallets.s.sol --rpc-url http://127.0.0.1:8545 --broadcast --unlocked",
+    "snapshot": "forge snapshot",
+    "doc": "forge doc",
+    "verify": "forge verify-contract",
+    "install": "forge install",
+    "update": "forge update",
+    "remappings": "forge remappings > remappings.txt",
+    "analyze": "npm run security && npm run test:coverage && npm run test:gas",
+    "ci": "npm run check && npm run security && npm run test:all",
+    "dev": "concurrently \"npm run anvil:fast\" \"npm run test:watch\"",
+    "prepare": "npm run build && npm run remappings"
+  },
+  "dependencies": {
+    "@morpho-org/blue-sdk": "^4.2.0",
+    "@morpho-org/simulation-sdk": "^3.1.1",
+    "@noble/hashes": "^1.8.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.2.0",
+    "@types/node": "^20.17.11",
+    "@typescript-eslint/eslint-plugin": "^8.18.3",
+    "@typescript-eslint/parser": "^8.18.3",
+    "concurrently": "^8.2.2",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "lcov": "^1.0.0",
+    "wait-on": "^7.2.0"
+  },
+  "keywords": [
+    "solidity",
+    "foundry",
+    "defi",
+    "erc4626",
+    "morpho",
+    "base",
+    "usdc",
+    "yield-farming",
+    "smart-contracts",
+    "blockchain"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/FlorentDgrs/RiseFiV3"
+  },
+  "bugs": {
+    "url": "https://github.com/FlorentDgrs/RiseFiV3/issues"
+  },
+  "homepage": "https://github.com/FlorentDgrs/RiseFiV3#readme"
+}

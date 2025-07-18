@@ -411,15 +411,15 @@ const ActionCard = React.memo(function ActionCard({
   if (!mounted) return null;
 
   return (
-    <div className="w-full max-w-sm mx-auto p-6 rounded-2xl bg-gray-900/90 border border-[#f5c249] shadow-xl">
+    <div className="w-full max-w-sm mx-auto pt-2 pb-4 px-4 rounded-2xl bg-gray-900/90 shadow-xl">
       {/* Tabs */}
-      <div className="flex mb-6">
+      <div className="flex mb-3">
         <button
-          className={`flex-1 py-3 transition text-sm font-medium
+          className={`flex-1 py-3 transition text-base font-semibold
             ${
               tab === "deposit"
-                ? "text-[#f5c249] font-bold border-b-2 border-[#f5c249]"
-                : "text-gray-400 hover:text-gray-300"
+                ? "text-[#f5c249] border-b-2 border-[#f5c249]"
+                : "text-white opacity-80 hover:opacity-100"
             }
           `}
           onClick={() => setTab("deposit")}
@@ -428,11 +428,11 @@ const ActionCard = React.memo(function ActionCard({
           Deposit
         </button>
         <button
-          className={`flex-1 py-3 transition text-sm font-medium
+          className={`flex-1 py-3 transition text-base font-semibold
             ${
               tab === "withdraw"
-                ? "text-[#f5c249] font-bold border-b-2 border-[#f5c249]"
-                : "text-gray-400 hover:text-gray-300"
+                ? "text-[#f5c249] border-b-2 border-[#f5c249]"
+                : "text-white opacity-80 hover:opacity-100"
             }
           `}
           onClick={() => setTab("withdraw")}
@@ -443,7 +443,7 @@ const ActionCard = React.memo(function ActionCard({
       </div>
 
       {/* Input */}
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2">
         <label htmlFor="actionAmount" className="text-sm text-gray-300">
           Amount:
         </label>
@@ -462,7 +462,7 @@ const ActionCard = React.memo(function ActionCard({
             type="button"
             onClick={tab === "deposit" ? handleMaxDeposit : handleMaxWithdraw}
             disabled={!address || isLoading}
-            className="bg-gray-700 hover:bg-gray-600 text-[#f5c249] font-bold py-2 px-3 rounded-lg transition duration-200 disabled:opacity-50"
+            className="bg-gray-700 hover:bg-gray-600 text-[#f5c249] font-medium text-sm py-1.5 px-2.5 rounded-lg transition duration-200 disabled:opacity-50"
           >
             MAX
           </button>
@@ -494,7 +494,7 @@ const ActionCard = React.memo(function ActionCard({
         <button
           onClick={handleAction}
           disabled={!address || isLoading}
-          className="w-full bg-[#f5c249] hover:bg-[#e6b142] text-gray-900 font-bold py-3 px-4 rounded-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full bg-[#f5c249] hover:bg-[#e6b142] text-gray-900 font-semibold text-base py-2.5 px-4 rounded-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {isLoading ? (
             <>

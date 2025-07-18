@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+lib/
+
+# Build artifacts
+out/
+dist/
+cache/
+broadcast/
+coverage/
+
+# Generated files
+*.log
+*.tsbuildinfo
+lcov.info
+remappings.txt
+
+# Environment files
+.env
+.env.*
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Foundry artifacts
+anvil.log
+.gas-snapshot
+
+# Documentation
+docs/
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/ 

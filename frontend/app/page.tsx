@@ -82,12 +82,20 @@ export default function Home() {
                     Don&apos;t have a wallet yet? No worries, we explain
                     everything in our Academy section
                   </p>
-                  <button
-                    onClick={() => router.push("/academy")}
-                    className="text-[#f5c249] hover:text-[#e6b142] font-medium py-2 px-6 rounded-lg transition duration-200 border border-[#f5c249]/30 hover:border-[#f5c249] bg-transparent"
-                  >
-                    Learn More About DeFi →
-                  </button>
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <button
+                      onClick={() => router.push("/academy?section=wallet")}
+                      className="text-[#f5c249] hover:text-[#e6b142] font-medium py-2 px-6 rounded-lg transition duration-200 border border-[#f5c249]/30 hover:border-[#f5c249] bg-transparent"
+                    >
+                      Get a Web3 Wallet →
+                    </button>
+                    <button
+                      onClick={() => router.push("/academy")}
+                      className="text-gray-400 hover:text-[#f5c249] font-medium py-2 px-6 rounded-lg transition duration-200 border border-gray-600/30 hover:border-[#f5c249]/30 bg-transparent"
+                    >
+                      Learn More About DeFi →
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -117,7 +125,17 @@ export default function Home() {
                   <ul className="space-y-3 text-gray-400">
                     <li className="flex items-start gap-3">
                       <span className="text-[#f5c249] mt-1">✓</span>
-                      <span>Better returns than Livret A (0.5% → 4%+ APY)</span>
+                      <span>
+                        Better returns than Livret A (0.5% → 4%+ APY)
+                        <button
+                          onClick={() =>
+                            router.push("/academy?section=understanding-apy")
+                          }
+                          className="ml-2 text-[#f5c249] hover:text-[#e6b142] text-sm underline transition-colors"
+                        >
+                          Learn about APY
+                        </button>
+                      </span>
                     </li>
                     <li className="flex items-start gap-3">
                       <span className="text-[#f5c249] mt-1">✓</span>
@@ -129,7 +147,15 @@ export default function Home() {
                     </li>
                     <li className="flex items-start gap-3">
                       <span className="text-[#f5c249] mt-1">✓</span>
-                      <span>Learn DeFi at your own pace</span>
+                      <span>
+                        Learn DeFi at your own pace
+                        <button
+                          onClick={() => router.push("/academy")}
+                          className="ml-2 text-[#f5c249] hover:text-[#e6b142] text-sm underline transition-colors"
+                        >
+                          Start learning
+                        </button>
+                      </span>
                     </li>
                   </ul>
                 </div>
@@ -148,7 +174,10 @@ export default function Home() {
               Why Choose RiseFi?
             </h2>
             <div className="grid md:grid-cols-3 gap-10">
-              <div className="bg-gray-800/50 rounded-xl p-8 border border-gray-700 hover:border-[#f5c249]/50 transition-all duration-300">
+              <div
+                className="bg-gray-800/50 rounded-xl p-8 border border-gray-700 hover:border-[#f5c249]/50 transition-all duration-300 cursor-pointer group"
+                onClick={() => router.push("/academy")}
+              >
                 <div className="flex items-center gap-3 mb-6">
                   <svg width="24" height="24" viewBox="0 0 24 24">
                     <rect
@@ -160,14 +189,17 @@ export default function Home() {
                       fill="#f5c249"
                     />
                   </svg>
-                  <h3 className="text-2xl font-semibold text-white">
+                  <h3 className="text-2xl font-semibold text-white group-hover:text-[#f5c249] transition-colors">
                     Education First
                   </h3>
                 </div>
-                <p className="text-gray-400 leading-relaxed">
+                <p className="text-gray-400 leading-relaxed mb-4">
                   Learn DeFi step by step. No confusing jargon, just clear
                   explanations of how your money works for you.
                 </p>
+                <div className="text-[#f5c249] text-sm font-medium group-hover:text-[#e6b142] transition-colors">
+                  Visit RiseFi Academy →
+                </div>
               </div>
               <div className="bg-gray-800/50 rounded-xl p-8 border border-gray-700 hover:border-[#f5c249]/50 transition-all duration-300">
                 <div className="flex items-center gap-3 mb-6">

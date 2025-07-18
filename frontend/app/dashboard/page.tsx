@@ -195,21 +195,23 @@ export default function Dashboard() {
           {/* Vault Status Banner */}
           <VaultStatusBanner />
 
-          {/* Carte unique : Wallet + EasyVest + Actions */}
-          <div className="w-full max-w-md bg-gray-900/90 rounded-2xl p-8 shadow-xl border border-gray-700 flex flex-col gap-6 mx-auto">
-            {/* Strategy header */}
-            <div className="flex items-center justify-between">
-              <span className="text-gray-200 font-semibold text-lg">
-                Strategy: EasyVest
-              </span>
-              <ApyDisplay apy={apy} apyLoading={apyLoading} />
+          {/* Main Dashboard Card with Academy-style colors */}
+          <div className="w-full max-w-md bg-gray-800/50 rounded-2xl p-8 shadow-xl border border-gray-700 mx-auto space-y-6">
+            {/* Strategy header and balance */}
+            <div className="px-2">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-gray-200 font-semibold text-lg">
+                  Strategy: EasyVest
+                </span>
+                <ApyDisplay apy={apy} apyLoading={apyLoading} />
+              </div>
+
+              {/* Balance display */}
+              {balanceDisplay}
             </div>
 
-            {/* Balance display */}
-            {balanceDisplay}
-
-            {/* Action card */}
-            <div className="flex flex-col gap-6">
+            {/* Action card with Academy-style dark background */}
+            <div className="bg-[#101826] rounded-xl p-2">
               <ActionCard
                 usdcBalanceStr={stats.usdcBalanceStr}
                 maxWithdrawStr={stats.maxWithdrawStr}
