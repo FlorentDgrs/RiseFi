@@ -22,6 +22,14 @@ jobs:
           node-version: 20
       - name: Install dependencies
         run: npm install
+      - name: Clean TypeScript cache
+        run: rm -f tsconfig.tsbuildinfo && rm -rf .next/cache
+      - name: Verify required files
+        run: |
+          echo "Checking for required files..."
+          ls -la lib/utils.ts
+          ls -la utils/generated-abi.ts
+          echo "All required files present!"
       - name: Lint
         run: npm run lint
       - name: TypeScript type check

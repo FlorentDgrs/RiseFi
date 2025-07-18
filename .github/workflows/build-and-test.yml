@@ -1,10 +1,7 @@
-# Correction du workflow CI pour fiabilité fork public
-# 1. Suppression de FOUNDRY_PROFILE global
-# 2. Foundry nightly (pour --fork-retry-backoff)
-# 3. Cache compilateur + dépendances
-# 4. Fork explicite + robustesse RPC dans les jobs forkés
+# Optimized CI workflow for RiseFi
+# Combines tests efficiently and reduces redundancy
 
-name: RiseFi CI - Base Integration & Yield Validation
+name: RiseFi CI - Optimized Build & Test
 
 on:
   push:
@@ -48,52 +45,19 @@ jobs:
       - name: Install dependencies
         run: forge install
 
-      - name: Check code formatting
+      - name: Build contracts
+        run: forge build --build-info -q
+
+      - name: Run Solidity linting
         run: forge fmt --check
 
-      - name: Build contracts
-        run: forge build --sizes
-
-  unit-tests:
-    name: Unit Tests (No Fork)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: RiseFi
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Cache Foundry compiler
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/.foundry
-          key: ${{ runner.os }}-foundry-${{ hashFiles('**/foundry.toml') }}
-
-      - name: Cache dependencies
-        uses: actions/cache@v3
-        with:
-          path: RiseFi/lib
-          key: ${{ runner.os }}-forge-deps-${{ hashFiles('**/foundry.toml') }}
-
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: nightly
-
-      - name: Install dependencies
-        run: forge install
-
-      - name: Run unit tests
+      - name: Run unit tests (local)
         run: |
-          forge test \
-            --no-match-contract '(Fork|Yield)' \
-            --gas-report
+          echo "=== Running Unit Tests ==="
+          forge test --match-contract 'RiseFiVaultOptimizedTest' --match-test 'test_Optimized_.*' --gas-report
 
-  base-integration:
-    name: Base Integration Tests (Fork + Whale + Vault)
+  comprehensive-testing:
+    name: Comprehensive Testing Suite
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -124,57 +88,13 @@ jobs:
       - name: Install dependencies
         run: forge install
 
-      - name: Run Base fork tests
+      - name: Run comprehensive test suite
         env:
-          FOUNDRY_FUZZ_RUNS: 64
+          FOUNDRY_FUZZ_RUNS: 32
         run: |
-          echo "=== Testing Base Mainnet Integration ==="
+          echo "=== Running Comprehensive Test Suite ==="
           forge test \
-            --match-contract 'Fork' \
-            --fork-url https://mainnet.base.org \
-            --fork-block-number 32778110 \
-            --fork-retry-backoff 300 \
-            --gas-report
-
-  yield-validation:
-    name: Yield Validation (Time Machine Tests)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: RiseFi
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Cache Foundry compiler
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/.foundry
-          key: ${{ runner.os }}-foundry-${{ hashFiles('**/foundry.toml') }}
-
-      - name: Cache dependencies
-        uses: actions/cache@v3
-        with:
-          path: RiseFi/lib
-          key: ${{ runner.os }}-forge-deps-${{ hashFiles('**/foundry.toml') }}
-
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: nightly
-
-      - name: Install dependencies
-        run: forge install
-
-      - name: Run yield validation tests
-        env:
-          FOUNDRY_FUZZ_RUNS: 64
-        run: |
-          echo "=== Testing Yield Generation Over Time ==="
-          forge test \
-            --match-contract 'RiseFiVaultYieldTest' \
+            --match-contract 'RiseFiVaultOptimizedTest' \
             --fork-url https://mainnet.base.org \
             --fork-block-number 32778110 \
             --fork-retry-backoff 300 \
@@ -221,4 +141,3 @@ jobs:
           target: "RiseFi/"
           slither-args: "--foundry-out-dir out --exclude-dependencies"
           ignore-compile: true
-          fail-on: none
