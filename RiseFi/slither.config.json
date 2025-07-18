@@ -26,6 +26,5 @@
     "immutable-states",
     "var-read-using-this"
   ],
-  "printers_to_run": "",
   "disable_color": false
 }
