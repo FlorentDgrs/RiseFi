@@ -5,7 +5,6 @@ import "forge-std/Script.sol";
 import "src/RiseFiVault.sol";
 
 contract DeployVault is Script {
-
     function run() external {
         // Addresses to use (USDC and Morpho Vault on Base)
         address usdc = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
@@ -17,5 +16,4 @@ contract DeployVault is Script {
 
         console2.log("RiseFiVault deployed at:", address(vault));
     }
-
 }

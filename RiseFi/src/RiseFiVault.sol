@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
-import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { ERC4626 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
-import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
  * @title RiseFi Vault - Morpho Integration
@@ -19,7 +19,6 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
  * @author RiseFi Team
  */
 contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
-
     using SafeERC20 for IERC20;
 
     // ========== CONSTANTS ==========
@@ -51,9 +50,7 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
     // ========== MODIFIERS ==========
 
     /// @notice Ensures minimum deposit amount is met
-    modifier validDepositAmount(
-        uint256 assets
-    ) {
+    modifier validDepositAmount(uint256 assets) {
         if (assets < MIN_DEPOSIT) {
             revert InsufficientDeposit(assets, MIN_DEPOSIT);
         }
@@ -122,10 +119,11 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
      * @param asset_ The underlying asset (must be USDC)
      * @param morphoVault_ The Morpho vault address to integrate with
      */
-    constructor(
-        IERC20 asset_,
-        address morphoVault_
-    ) ERC20("RiseFi Vault", "rfUSDC") ERC4626(asset_) Ownable(msg.sender) {
+    constructor(IERC20 asset_, address morphoVault_)
+        ERC20("RiseFi Vault", "rfUSDC")
+        ERC4626(asset_)
+        Ownable(msg.sender)
+    {
         if (address(asset_) != USDC) {
             revert InvalidAsset(address(asset_), USDC);
         }
@@ -155,9 +153,7 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
     }
 
     /// @notice Calculates Morpho shares to redeem with validation
-    function _calculateMorphoSharesToRedeem(
-        uint256 shares
-    ) internal view returns (uint256) {
+    function _calculateMorphoSharesToRedeem(uint256 shares) internal view returns (uint256) {
         uint256 morphoShares = IERC20(address(morphoVault)).balanceOf(address(this));
         uint256 supply = totalSupply();
         uint256 effectiveSupply;
@@ -184,10 +180,15 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
      * @return shares The amount of shares received
      * @dev Reverts if slippage exceeds SLIPPAGE_TOLERANCE
      */
-    function deposit(
-        uint256 assets,
-        address receiver
-    ) public override nonReentrant whenNotPaused validDepositAmount(assets) initializeDeadShares returns (uint256) {
+    function deposit(uint256 assets, address receiver)
+        public
+        override
+        nonReentrant
+        whenNotPaused
+        validDepositAmount(assets)
+        initializeDeadShares
+        returns (uint256)
+    {
         // Calculate shares to mint BEFORE changing totalAssets
         uint256 sharesToMint = previewDeposit(assets);
 
@@ -209,11 +210,14 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
      * @param ownerAddr The address owning the shares (renamed to avoid shadowing)
      * @return assets The amount of assets received
      */
-    function redeem(
-        uint256 shares,
-        address receiver,
-        address ownerAddr
-    ) public override nonReentrant whenNotPaused validateAllowance(ownerAddr, shares) returns (uint256) {
+    function redeem(uint256 shares, address receiver, address ownerAddr)
+        public
+        override
+        nonReentrant
+        whenNotPaused
+        validateAllowance(ownerAddr, shares)
+        returns (uint256)
+    {
         // Handle zero shares case
         if (shares == 0) {
             emit Withdraw(msg.sender, receiver, ownerAddr, 0, 0);
@@ -257,9 +261,7 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
     // ========== LIQUIDITY HELPERS ==========
 
     /// @notice Validates liquidity is sufficient for redemption
-    function _validateRedemptionLiquidity(
-        uint256 morphoSharesToRedeem
-    ) internal view {
+    function _validateRedemptionLiquidity(uint256 morphoSharesToRedeem) internal view {
         uint256 maxRedeemable = morphoVault.maxRedeem(address(this));
         if (morphoSharesToRedeem > maxRedeemable) {
             revert InsufficientLiquidity(morphoSharesToRedeem, maxRedeemable);
@@ -314,18 +316,14 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
     /**
      * @notice Preview deposit - central logic for deposits
      */
-    function previewDeposit(
-        uint256 assets
-    ) public view override returns (uint256) {
+    function previewDeposit(uint256 assets) public view override returns (uint256) {
         return _convertToShares(assets, Math.Rounding.Floor);
     }
 
     /**
      * @notice Preview redeem - central logic for redemptions
      */
-    function previewRedeem(
-        uint256 shares
-    ) public view override returns (uint256) {
+    function previewRedeem(uint256 shares) public view override returns (uint256) {
         return _convertToAssets(shares, Math.Rounding.Floor);
     }
 
@@ -341,9 +339,7 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
     /**
      * @notice Preview mint - disabled, returns 0
      */
-    function previewMint(
-        uint256 /* shares */
-    ) public pure override returns (uint256) {
+    function previewMint(uint256 /* shares */ ) public pure override returns (uint256) {
         return 0; // Mint is disabled
     }
 
@@ -352,36 +348,28 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
     /**
      * @notice Get maximum deposit amount
      */
-    function maxDeposit(
-        address /* receiver */
-    ) public view override returns (uint256) {
+    function maxDeposit(address /* receiver */ ) public view override returns (uint256) {
         return paused() ? 0 : type(uint256).max;
     }
 
     /**
      * @notice Minting is disabled
      */
-    function maxMint(
-        address /* receiver */
-    ) public pure override returns (uint256) {
+    function maxMint(address /* receiver */ ) public pure override returns (uint256) {
         return 0;
     }
 
     /**
      * @notice Maximum withdrawal is disabled
      */
-    function maxWithdraw(
-        address /* owner */
-    ) public pure override returns (uint256) {
+    function maxWithdraw(address /* owner */ ) public pure override returns (uint256) {
         return 0; // Withdraw is disabled
     }
 
     /**
      * @notice Get maximum redemption amount considering liquidity
      */
-    function maxRedeem(
-        address ownerAddr
-    ) public view override returns (uint256) {
+    function maxRedeem(address ownerAddr) public view override returns (uint256) {
         // Early returns for gas optimization
         if (paused()) return 0;
 
@@ -548,5 +536,4 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
             morphoVault.redeem(morphoShares, address(this), address(this));
         }
     }
-
 }

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import { RiseFiVault } from "../src/RiseFiVault.sol";
+import {RiseFiVault} from "../src/RiseFiVault.sol";
 
-import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import { Test } from "forge-std/Test.sol";
-import { console2 } from "forge-std/console2.sol";
+import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {Test} from "forge-std/Test.sol";
+import {console2} from "forge-std/console2.sol";
 
 /**
  * @title RiseFi Vault Comprehensive Test Suite
@@ -22,7 +22,6 @@ import { console2 } from "forge-std/console2.sol";
  * @author RiseFi Team
  */
 contract RiseFiVaultOptimizedTest is Test {
-
     // ========== STATE VARIABLES ==========
     RiseFiVault public vault;
 
@@ -641,9 +640,7 @@ contract RiseFiVaultOptimizedTest is Test {
      *      Validates that deposit-redeem cycles preserve value within tolerance
      * @param amount Random deposit amount (bounded to reasonable range)
      */
-    function testFuzz_Optimized_Deposit_Redeem(
-        uint256 amount
-    ) public {
+    function testFuzz_Optimized_Deposit_Redeem(uint256 amount) public {
         // Bound input to realistic range: 1 to 10,000 USDC
         amount = bound(amount, 1 * 10 ** 6, 10_000 * 10 ** 6);
 
@@ -1684,5 +1681,4 @@ contract RiseFiVaultOptimizedTest is Test {
 
         assertGt(newShares, 0, "Should be able to deposit after unpause");
     }
-
 }
