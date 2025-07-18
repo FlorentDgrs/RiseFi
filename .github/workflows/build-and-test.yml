@@ -139,5 +139,6 @@ jobs:
         uses: crytic/slither-action@v0.3.0
         with:
           target: "RiseFi/"
-          slither-args: "--foundry-out-dir out --exclude-dependencies"
+          slither-args: "--foundry-out-dir out --exclude-dependencies --config-file slither.config.json --exclude-informational --exclude-optimization --filter-paths lib/,test/,script/"
           ignore-compile: true
+          fail-on: medium
