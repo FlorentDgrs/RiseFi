@@ -10,7 +10,6 @@ import {
 import { ABIS, CONTRACTS } from "@/utils/contracts";
 import { toast } from "sonner";
 import EnhancedVaultInfo from "./EnhancedVaultInfo";
-// import EmergencyWithdraw from "./EmergencyWithdraw";
 
 const VAULT_ADDRESS = CONTRACTS.RISEFI_VAULT;
 const VAULT_ABI = ABIS.RISEFI_VAULT;
@@ -95,22 +94,20 @@ export default function AdminDashboard() {
   // Write hooks
   const { writeContractAsync: writePauseAsync } = useWriteContract();
   const { writeContractAsync: writeUnpauseAsync } = useWriteContract();
-  const { writeContractAsync: writeEmergencyWithdrawFromMorphoAsync } =
-    useWriteContract();
 
   // Read owner
   const { data: owner } = useReadContract({
     address: VAULT_ADDRESS,
     abi: VAULT_ABI,
     functionName: "owner",
-  });
+  }) as { data: string | undefined };
 
   // Read pause status
   const { data: isPaused, refetch: refetchPauseStatus } = useReadContract({
     address: VAULT_ADDRESS,
     abi: VAULT_ABI,
     functionName: "isPaused",
-  });
+  }) as { data: boolean | undefined; refetch: () => void };
 
   // Transaction confirmation tracking
   const {
@@ -264,53 +261,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleEmergencyWithdrawFromMorpho = async () => {
-    if (!isOwner) {
-      showErrorToast(
-        "Access denied",
-        "Only the contract owner can perform this action"
-      );
-      return;
-    }
-
-    try {
-      const emergencyToastId = showLoadingToast(
-        "Emergency Morpho withdrawal",
-        "Withdrawing all funds from Morpho vault to contract..."
-      );
-      setCurrentToastId(emergencyToastId);
-
-      const tx = await writeEmergencyWithdrawFromMorphoAsync({
-        address: VAULT_ADDRESS,
-        abi: VAULT_ABI,
-        functionName: "emergencyWithdrawFromMorpho",
-        gas: BigInt(200000),
-      });
-
-      setTxHash(tx as `0x${string}`);
-
-      // Update toast
-      toast.dismiss(emergencyToastId);
-      const confirmToastId = showLoadingToast(
-        "Transaction sent",
-        "Waiting for blockchain confirmation..."
-      );
-      setCurrentToastId(confirmToastId);
-    } catch (e: unknown) {
-      if (currentToastId) {
-        toast.dismiss(currentToastId);
-        setCurrentToastId(null);
-      }
-
-      const errorMessage =
-        e instanceof Error
-          ? e.message
-          : "Error during emergency Morpho withdrawal";
-      showErrorToast("Emergency withdrawal failed", errorMessage);
-      setTxHash(undefined);
-    }
-  };
-
   // Don't render if not mounted or not owner
   if (!mounted || !isOwner) {
     return null;
@@ -407,57 +357,9 @@ export default function AdminDashboard() {
           </div>
 
           <div className="mt-3 text-xs text-gray-400">
-            <p>• Pausing stops all deposits and withdrawals</p>
-            <p>• Emergency withdrawals remain available</p>
+            <p>• Pausing stops deposits but allows withdrawals</p>
+            <p>• Users can still redeem their shares when paused</p>
             <p>• Use only in case of security issues</p>
-          </div>
-        </div>
-
-        {/* Emergency Controls */}
-        <div className="p-6 rounded-2xl bg-gray-900/90 border border-gray-700 shadow-xl">
-          <h2 className="text-xl font-bold text-gray-200 mb-4">
-            Emergency Controls
-          </h2>
-
-          <div className="mb-4 p-3 rounded-lg bg-gray-800/50 border border-gray-600">
-            <h3 className="text-sm font-semibold text-gray-300 mb-2">
-              Two Emergency Functions:
-            </h3>
-            <div className="text-xs text-gray-300 space-y-1">
-              <p>
-                <strong>1. emergencyWithdrawFromMorpho()</strong> - Admin only
-              </p>
-              <p>• Withdraws ALL funds from Morpho vault to RiseFi contract</p>
-              <p>• No parameters needed - withdraws everything</p>
-              <p>• Use when Morpho vault has issues</p>
-              <p>
-                <strong>2. emergencyWithdraw()</strong> - User function
-              </p>
-              <p>• Users can withdraw their shares with amount parameter</p>
-              <p>• Bypasses pause and slippage protection</p>
-              <p>• Available in EmergencyWithdraw component below</p>
-            </div>
-          </div>
-
-          <button
-            onClick={handleEmergencyWithdrawFromMorpho}
-            disabled={true}
-            className="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed mb-3"
-          >
-            Emergency Withdraw ALL from Morpho (Disabled)
-          </button>
-
-          <div className="text-xs text-gray-400 space-y-1">
-            <p>
-              <strong>EXTREME EMERGENCY ONLY</strong>
-            </p>
-            <p>• Withdraws ALL funds from Morpho vault</p>
-            <p>• Brings funds back to RiseFi contract</p>
-            <p>• Users can then use emergency withdrawal</p>
-            <p>• Irreversible action - use with extreme caution</p>
-            <p>
-              • Owner cannot steal funds - only moves them to RiseFi contract
-            </p>
           </div>
         </div>
       </div>

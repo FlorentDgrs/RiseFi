@@ -18,7 +18,7 @@ export default function Header() {
     address: CONTRACTS.RISEFI_VAULT,
     abi: ABIS.RISEFI_VAULT,
     functionName: "owner",
-  });
+  }) as { data: string | undefined };
 
   // Check if user is owner
   useEffect(() => {

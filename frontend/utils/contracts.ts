@@ -1,7 +1,7 @@
 // Contract configuration for RiseFi frontend
 // Contract addresses on local Base fork
 
-import { RISEFI_VAULT_ABI } from "./generated-abi";
+import { RISEFI_VAULT_ABI_TYPED } from "./abi";
 
 export const CONTRACTS = {
   USDC: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
@@ -88,7 +88,7 @@ export const ABIS = {
   ] as const,
 
   // RiseFi Vault ABI - Now automatically generated from the contract
-  RISEFI_VAULT: RISEFI_VAULT_ABI,
+  RISEFI_VAULT: RISEFI_VAULT_ABI_TYPED,
 } as const;
 
 // Helper to update RiseFi vault address after deployment

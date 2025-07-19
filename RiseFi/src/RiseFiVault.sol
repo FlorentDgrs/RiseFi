@@ -27,7 +27,8 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
     uint256 public constant MIN_DEPOSIT = 1e6;
 
     /// @notice Number of "dead shares" minted at initialization to prevent inflation attacks
-    uint256 public constant DEAD_SHARES = 1000;
+    /// @dev Dead shares are in 18 decimals (rfUSDC units), not 6 decimals (USDC units)
+    uint256 public constant DEAD_SHARES = 1000 * 1e18;
 
     /// @notice Dead shares address
     address public constant DEAD_ADDRESS = 0x000000000000000000000000000000000000dEaD;
@@ -86,9 +87,6 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
     /// @notice Thrown when slippage exceeds tolerance
     error SlippageExceeded(uint256 expected, uint256 actual);
 
-    /// @notice Thrown when emergency withdraw fails
-    error EmergencyWithdrawFailed();
-
     /// @notice Thrown when withdraw function is called (disabled)
     error WithdrawDisabled();
 
@@ -108,9 +106,6 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
 
     /// @notice Emitted when slippage guard is triggered
     event SlippageGuardTriggered(address indexed user, uint256 expected, uint256 actual, bytes32 indexed operation);
-
-    /// @notice Emitted when emergency withdraw is executed
-    event EmergencyWithdraw(address indexed user, uint256 shares, uint256 assets);
 
     // ========== CONSTRUCTOR ==========
 
@@ -214,7 +209,6 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
         public
         override
         nonReentrant
-        whenNotPaused
         validateAllowance(ownerAddr, shares)
         returns (uint256)
     {
@@ -298,8 +292,9 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
         uint256 supply = totalSupply();
         uint256 totalAssets_ = totalAssets();
 
-        // Fix dangerous strict equality: use <= instead of ==
-        if (supply <= DEAD_SHARES) return assets;
+        // If vault is empty (only dead shares), mint shares 1:1 with assets
+        // Convert from 6 decimals (USDC) to 18 decimals (rfUSDC)
+        if (supply <= DEAD_SHARES) return assets * 1e12;
 
         uint256 effectiveSupply;
         unchecked {
@@ -370,9 +365,6 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
      * @notice Get maximum redemption amount considering liquidity
      */
     function maxRedeem(address ownerAddr) public view override returns (uint256) {
-        // Early returns for gas optimization
-        if (paused()) return 0;
-
         uint256 ownerShares = balanceOf(ownerAddr);
         // Fix dangerous strict equality: use <= instead of ==
         if (ownerShares <= 0) return 0;
@@ -448,65 +440,6 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
         return 18;
     }
 
-    // ========== EMERGENCY FUNCTIONS ==========
-
-    /**
-     * @notice Emergency withdraw - bypasses pause and slippage protection
-     * @dev Uses same Morpho logic as redeem() but without safety checks
-     * @param shares The amount of shares to burn
-     * @param receiver The address to receive the assets
-     * @return assets The amount of assets received
-     */
-    function emergencyWithdraw(uint256 shares, address receiver) external nonReentrant returns (uint256 assets) {
-        if (shares == 0) return 0;
-
-        uint256 userBalance = balanceOf(msg.sender);
-        if (shares > userBalance) {
-            revert InsufficientBalance(shares, userBalance);
-        }
-
-        // Calculate Morpho shares to redeem (same logic as redeem)
-        uint256 morphoSharesToRedeem = _calculateMorphoSharesToRedeem(shares);
-
-        // Fix dangerous strict equality: use <= instead of ==
-        if (morphoSharesToRedeem <= 0) {
-            revert EmergencyWithdrawFailed();
-        }
-
-        // Try Morpho redemption first WITHOUT burning shares
-        try morphoVault.redeem(morphoSharesToRedeem, receiver, address(this)) returns (uint256 receivedAssets) {
-            // Success: burn shares and return assets
-            _burn(msg.sender, shares);
-            assets = receivedAssets;
-        } catch {
-            // If Morpho fails, try to use direct contract balance as fallback
-            uint256 contractBalance = IERC20(asset()).balanceOf(address(this));
-            uint256 supply = totalSupply(); // Don't add back shares since we haven't burned them yet
-
-            // Fix dangerous strict equality: use <= instead of ==
-            if (supply <= DEAD_SHARES || contractBalance <= 0) {
-                revert EmergencyWithdrawFailed();
-            }
-
-            uint256 effectiveSupply;
-            unchecked {
-                effectiveSupply = supply - DEAD_SHARES; // Safe: supply > DEAD_SHARES checked above
-            }
-
-            assets = (shares * contractBalance) / effectiveSupply;
-            // Only burn shares and transfer if we have enough balance
-            if (assets > 0 && contractBalance >= assets) {
-                _burn(msg.sender, shares);
-                IERC20(asset()).safeTransfer(receiver, assets);
-            } else {
-                revert EmergencyWithdrawFailed();
-            }
-        }
-
-        emit EmergencyWithdraw(msg.sender, shares, assets);
-        return assets;
-    }
-
     // ========== ADMIN FUNCTIONS ==========
 
     /**
@@ -523,17 +456,5 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
      */
     function unpause() external onlyOwner {
         _unpause();
-    }
-
-    /**
-     * @notice Emergency function to withdraw all funds from Morpho
-     * @dev Only callable by owner in extreme emergency
-     * @dev Brings all funds back to the contract for emergency withdrawals
-     */
-    function emergencyWithdrawFromMorpho() external onlyOwner {
-        uint256 morphoShares = IERC20(address(morphoVault)).balanceOf(address(this));
-        if (morphoShares > 0) {
-            morphoVault.redeem(morphoShares, address(this), address(this));
-        }
     }
 }

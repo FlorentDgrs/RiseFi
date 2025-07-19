@@ -215,7 +215,9 @@ export default function Dashboard() {
               <ActionCard
                 usdcBalanceStr={stats.usdcBalanceStr}
                 maxWithdrawStr={stats.maxWithdrawStr}
-                investedAmountStr={stats.investedAmountStr}
+                usdcBalanceExact={stats.usdcBalanceExact}
+                maxWithdrawExact={stats.maxWithdrawExact}
+                userShares={stats.userShares}
                 refetchStats={handleRefetchStats}
               />
             </div>

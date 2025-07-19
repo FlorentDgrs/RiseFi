@@ -7,7 +7,7 @@ import {
   useWriteContract,
   useWaitForTransactionReceipt,
 } from "wagmi";
-import { parseUnits } from "viem";
+import { parseUnits, formatUnits } from "viem";
 import { ABIS, CONTRACTS, CONSTANTS } from "@/utils/contracts";
 import { toast } from "sonner";
 import React from "react";
@@ -15,7 +15,9 @@ import React from "react";
 interface ActionCardProps {
   usdcBalanceStr: string;
   maxWithdrawStr: string;
-  investedAmountStr: string;
+  usdcBalanceExact: string;
+  maxWithdrawExact: string;
+  userShares: bigint;
   refetchStats: () => void;
 }
 
@@ -96,10 +98,12 @@ const showLoadingToast = (message: string, description?: string) => {
 };
 
 // Memoized component to prevent unnecessary re-renders
-const ActionCard = React.memo(function ActionCard({
+const ActionCard: React.FC<ActionCardProps> = React.memo(function ActionCard({
   usdcBalanceStr,
   maxWithdrawStr,
-  investedAmountStr,
+  usdcBalanceExact,
+  maxWithdrawExact,
+  userShares,
   refetchStats,
 }: ActionCardProps) {
   const { address } = useAccount();
@@ -137,7 +141,26 @@ const ActionCard = React.memo(function ActionCard({
     functionName: "allowance",
     args: address ? [address, VAULT_ADDRESS] : undefined,
     query: { enabled: !!address && tab === "deposit" },
-  });
+  }) as { data: bigint | undefined; refetch: () => void };
+
+  // Convert USDC to shares for withdraw
+  const { data: sharesToRedeem } = useReadContract({
+    address: VAULT_ADDRESS,
+    abi: VAULT_ABI,
+    functionName: "convertToShares",
+    args: amount ? [parseUnits(amount, CONSTANTS.USDC_DECIMALS)] : undefined,
+    query: {
+      enabled:
+        !!address && tab === "withdraw" && !!amount && Number(amount) > 0,
+    },
+  }) as { data: bigint | undefined };
+
+  // Check if vault is paused
+  const { data: isPaused } = useReadContract({
+    address: VAULT_ADDRESS,
+    abi: VAULT_ABI,
+    functionName: "isPaused",
+  }) as { data: boolean | undefined };
 
   // Success/error handling with improved toasts
   useEffect(() => {
@@ -211,16 +234,27 @@ const ActionCard = React.memo(function ActionCard({
     }
   }, [amount, status]);
 
-  // Optimized MAX handlers
+  // Optimized MAX handlers - use exact values to prevent reverts
   const handleMaxDeposit = useCallback(() => {
-    setAmount(usdcBalanceStr);
+    setAmount(usdcBalanceExact);
     showInfoToast("Maximum amount selected", `${usdcBalanceStr} USDC`);
-  }, [usdcBalanceStr]);
+  }, [usdcBalanceExact, usdcBalanceStr]);
 
   const handleMaxWithdraw = useCallback(() => {
-    setAmount(maxWithdrawStr);
-    showInfoToast("Maximum amount selected", `${maxWithdrawStr} USDC`);
-  }, [maxWithdrawStr]);
+    // If maxWithdrawExact is 0 (paused state), use userShares directly
+    if (Number(maxWithdrawExact) === 0 && userShares > BigInt(0)) {
+      // Calculate max withdraw from userShares
+      const userSharesStr = formatUnits(userShares, CONSTANTS.USDC_DECIMALS);
+      setAmount(userSharesStr);
+      showInfoToast(
+        "Maximum amount selected",
+        `${userSharesStr} USDC (all shares)`
+      );
+    } else {
+      setAmount(maxWithdrawExact);
+      showInfoToast("Maximum amount selected", `${maxWithdrawStr} USDC`);
+    }
+  }, [maxWithdrawExact, maxWithdrawStr, userShares]);
 
   // Handler principal
   const handleAction = async () => {
@@ -246,6 +280,15 @@ const ActionCard = React.memo(function ActionCard({
     const amountBN = parseUnits(amount, CONSTANTS.USDC_DECIMALS);
 
     if (tab === "deposit") {
+      // Check if vault is paused
+      if (isPaused) {
+        showErrorToast(
+          "Deposits disabled",
+          "The vault is currently paused. Deposits are not allowed, but withdrawals are still available."
+        );
+        return;
+      }
+
       // Deposit with auto-approve if needed
       const safeAllowance =
         typeof allowance === "bigint" ? allowance : BigInt(0);
@@ -343,11 +386,20 @@ const ActionCard = React.memo(function ActionCard({
         );
         setCurrentToastId(withdrawToastId);
 
+        // For withdraw, we need to convert USDC to shares
+        if (!userShares || userShares === BigInt(0)) {
+          throw new Error("No shares to redeem");
+        }
+
+        if (!sharesToRedeem) {
+          throw new Error("Failed to calculate shares to redeem");
+        }
+
         const tx = await writeRedeemAsync({
           address: VAULT_ADDRESS,
           abi: VAULT_ABI,
           functionName: "redeem",
-          args: [amountBN, address, address],
+          args: [sharesToRedeem, address, address],
           gas: BigInt(500000),
         });
 
@@ -468,33 +520,50 @@ const ActionCard = React.memo(function ActionCard({
           </button>
         </div>
 
-        {/* Contextual info - SIMPLIFIED */}
-        <div className="flex flex-col gap-1 text-xs text-gray-400 font-mono">
-          {tab === "deposit" ? (
-            <span>
-              USDC Balance:{" "}
-              <span className="text-[#f5c249]">{usdcBalanceStr}</span>
-            </span>
-          ) : (
-            <span>
-              Max withdrawal:{" "}
-              <span className="text-[#f5c249]">{maxWithdrawStr}</span>
-            </span>
-          )}
-          {/* Display invested amount if available */}
-          {investedAmountStr && (
-            <span>
-              Invested:{" "}
-              <span className="text-[#f5c249]">{investedAmountStr} USDC</span>
-            </span>
+        {/* Validation messages */}
+        <div className="min-h-[20px] flex items-center">
+          {amount && Number(amount) > 0 && (
+            <>
+              {tab === "deposit" && Number(amount) < 1 && (
+                <span className="text-red-400 text-xs">
+                  Minimum deposit is 1 USDC
+                </span>
+              )}
+              {tab === "deposit" &&
+                Number(amount) > Number(usdcBalanceExact) && (
+                  <span className="text-red-400 text-xs">
+                    Insufficient USDC balance
+                  </span>
+                )}
+              {tab === "withdraw" &&
+                Number(amount) > Number(maxWithdrawExact) &&
+                Number(maxWithdrawExact) > 0 && (
+                  <span className="text-red-400 text-xs">
+                    Amount exceeds maximum withdrawal
+                  </span>
+                )}
+            </>
           )}
         </div>
+
+        {/* Pause warning for deposits */}
+        {isPaused && tab === "deposit" && (
+          <div className="p-2 bg-red-900/20 border border-red-500/50 rounded-lg">
+            <p className="text-xs text-red-400 text-center">
+              ⚠️ Deposits are disabled while vault is paused
+            </p>
+          </div>
+        )}
 
         {/* Dynamic button */}
         <button
           onClick={handleAction}
-          disabled={!address || isLoading}
-          className="w-full bg-[#f5c249] hover:bg-[#e6b142] text-gray-900 font-semibold text-base py-2.5 px-4 rounded-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          disabled={!address || isLoading || (isPaused && tab === "deposit")}
+          className={`w-full font-semibold text-base py-2.5 px-4 rounded-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+            isPaused && tab === "deposit"
+              ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+              : "bg-[#f5c249] hover:bg-[#e6b142] text-gray-900"
+          }`}
         >
           {isLoading ? (
             <>
@@ -504,7 +573,13 @@ const ActionCard = React.memo(function ActionCard({
               {status === "withdrawing" && "Withdrawing..."}
             </>
           ) : (
-            <span>{tab === "deposit" ? "Deposit" : "Withdraw"}</span>
+            <span>
+              {isPaused && tab === "deposit"
+                ? "Deposits Disabled"
+                : tab === "deposit"
+                ? "Deposit"
+                : "Withdraw"}
+            </span>
           )}
         </button>
       </div>

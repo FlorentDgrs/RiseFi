@@ -16,56 +16,56 @@ export default function EnhancedVaultInfo() {
     address: VAULT_ADDRESS,
     abi: VAULT_ABI,
     functionName: "MIN_DEPOSIT",
-  });
+  }) as { data: bigint | undefined };
 
   const { data: deadShares } = useReadContract({
     address: VAULT_ADDRESS,
     abi: VAULT_ABI,
     functionName: "DEAD_SHARES",
-  });
+  }) as { data: bigint | undefined };
 
   const { data: slippageTolerance } = useReadContract({
     address: VAULT_ADDRESS,
     abi: VAULT_ABI,
     functionName: "getSlippageTolerance",
-  });
+  }) as { data: bigint | undefined };
 
   const { data: basisPoints } = useReadContract({
     address: VAULT_ADDRESS,
     abi: VAULT_ABI,
     functionName: "BASIS_POINTS",
-  });
+  }) as { data: bigint | undefined };
 
   const { data: isPaused } = useReadContract({
     address: VAULT_ADDRESS,
     abi: VAULT_ABI,
     functionName: "isPaused",
-  });
+  }) as { data: boolean | undefined };
 
   const { data: deadAddress } = useReadContract({
     address: VAULT_ADDRESS,
     abi: VAULT_ABI,
     functionName: "DEAD_ADDRESS",
-  });
+  }) as { data: string | undefined };
 
   const { data: morphoVault } = useReadContract({
     address: VAULT_ADDRESS,
     abi: VAULT_ABI,
     functionName: "morphoVault",
-  });
+  }) as { data: string | undefined };
 
   // Enhanced vault metrics
   const { data: totalSupply } = useReadContract({
     address: VAULT_ADDRESS,
     abi: VAULT_ABI,
     functionName: "totalSupply",
-  });
+  }) as { data: bigint | undefined };
 
   const { data: totalAssets } = useReadContract({
     address: VAULT_ADDRESS,
     abi: VAULT_ABI,
     functionName: "totalAssets",
-  });
+  }) as { data: bigint | undefined };
 
   // Morpho vault shares held by RiseFi
   const { data: morphoSharesBalance } = useReadContract({
@@ -81,16 +81,18 @@ export default function EnhancedVaultInfo() {
     ],
     functionName: "balanceOf",
     args: [VAULT_ADDRESS],
-  });
+  }) as { data: bigint | undefined };
 
   // Calculate effective shares (total supply minus dead shares)
   const effectiveShares =
     totalSupply && deadShares ? totalSupply - deadShares : BigInt(0);
 
   // Calculate share price (corrected calculation)
+  // Normalize units: totalAssets (6 decimals) / effectiveShares (18 decimals)
+  // To get price per share in USDC, we need to multiply by 10^12
   const sharePrice =
     totalAssets && effectiveShares && effectiveShares > 0
-      ? Number(totalAssets) / Number(effectiveShares)
+      ? (Number(totalAssets) * 10 ** 12) / Number(effectiveShares)
       : 1;
 
   // Use the same APY as dashboard (from Morpho API)
@@ -161,15 +163,10 @@ export default function EnhancedVaultInfo() {
             }`}
           >
             {isPaused
-              ? "PAUSED - Deposits and withdrawals disabled"
+              ? "PAUSED - Deposits disabled, withdrawals available"
               : "ACTIVE - Normal operations"}
           </span>
         </div>
-        {isPaused && (
-          <p className="text-sm text-red-300 mt-2">
-            Emergency withdrawals remain available for users
-          </p>
-        )}
       </div>
 
       {/* Key Metrics Grid */}
@@ -378,8 +375,7 @@ export default function EnhancedVaultInfo() {
           <li>
             • Slippage protection is automatically applied to all operations
           </li>
-          <li>• Emergency withdraw bypasses normal safety checks</li>
-          <li>• When paused, only emergency withdrawals are available</li>
+          <li>• When paused, deposits are disabled but withdrawals work</li>
           <li>• Share price represents current value per vault share</li>
         </ul>
       </div>

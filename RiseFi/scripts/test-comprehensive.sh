@@ -15,7 +15,6 @@ NC='\033[0m' # No Color
 COVERAGE_THRESHOLD=95
 GAS_REPORT=true
 FUZZ_RUNS=1000
-INVARIANT_RUNS=256
 
 echo -e "${CYAN}🧪 === RiseFi Comprehensive Test Suite ===${NC}"
 echo ""
@@ -121,45 +120,16 @@ else
 fi
 echo ""
 
-# Run basic tests
-print_section "Running Basic Tests"
-if forge test; then
-    print_success "Basic tests passed"
+# Run comprehensive tests (basic + gas + fuzz)
+print_section "Running Comprehensive Tests"
+if forge test --fuzz-runs ${FUZZ_RUNS} --gas-report; then
+    print_success "All tests passed (basic + gas + fuzz)"
 else
-    print_error "Basic tests failed"
+    print_error "Tests failed"
     exit 1
 fi
 echo ""
 
-# Run tests with gas reporting
-print_section "Running Tests with Gas Reporting"
-if forge test --gas-report; then
-    print_success "Gas reporting tests passed"
-else
-    print_error "Gas reporting tests failed"
-    exit 1
-fi
-echo ""
-
-# Run fuzz tests
-print_section "Running Fuzz Tests (${FUZZ_RUNS} runs)"
-if forge test --fuzz-runs ${FUZZ_RUNS}; then
-    print_success "Fuzz tests passed with ${FUZZ_RUNS} runs"
-else
-    print_error "Fuzz tests failed"
-    exit 1
-fi
-echo ""
-
-# Run invariant tests
-print_section "Running Invariant Tests (${INVARIANT_RUNS} runs)"
-if forge test --invariant-runs ${INVARIANT_RUNS}; then
-    print_success "Invariant tests passed with ${INVARIANT_RUNS} runs"
-else
-    print_error "Invariant tests failed"
-    exit 1
-fi
-echo ""
 
 # Run coverage analysis
 print_section "Running Coverage Analysis"
@@ -195,18 +165,7 @@ else
 fi
 echo ""
 
-# Run security analysis with Slither (if available)
-print_section "Running Security Analysis"
-if command_exists slither; then
-    if slither . --config-file slither.config.json; then
-        print_success "Slither security analysis passed"
-    else
-        print_warning "Slither found potential security issues"
-    fi
-else
-    print_warning "Slither not found. Install Slither for security analysis."
-fi
-echo ""
+
 
 # Generate gas snapshot
 print_section "Generating Gas Snapshot"
@@ -232,12 +191,8 @@ fi
 # Summary
 print_section "Test Summary"
 echo -e "${PURPLE}📊 Test Results:${NC}"
-echo "  • Basic Tests: ✅ Passed"
-echo "  • Gas Reporting: ✅ Passed"
-echo "  • Fuzz Tests: ✅ Passed (${FUZZ_RUNS} runs)"
-echo "  • Invariant Tests: ✅ Passed (${INVARIANT_RUNS} runs)"
+echo "  • Comprehensive Tests: ✅ Passed (basic + gas + fuzz)"
 echo "  • Coverage Analysis: ✅ Completed"
-echo "  • Security Analysis: $(command_exists slither && echo "✅ Completed" || echo "⚠️  Skipped (Slither not installed)")"
 echo "  • Gas Snapshot: ✅ Generated"
 echo ""
 

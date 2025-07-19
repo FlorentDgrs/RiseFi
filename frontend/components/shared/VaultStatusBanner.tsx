@@ -41,8 +41,8 @@ export default function VaultStatusBanner() {
                   funds to the vault
                 </li>
                 <li>
-                  • <strong>Normal withdrawals are disabled</strong> - Standard
-                  operations are paused
+                  • <strong>Withdrawals are still available</strong> - You can
+                  still redeem your shares (ERC4626 standard)
                 </li>
                 <li>
                   • <strong>Your funds are safe</strong> - All assets remain in

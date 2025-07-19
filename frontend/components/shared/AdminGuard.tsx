@@ -21,7 +21,7 @@ export default function AdminGuard({ children }: AdminGuardProps) {
     address: CONTRACTS.RISEFI_VAULT,
     abi: ABIS.RISEFI_VAULT,
     functionName: "owner",
-  });
+  }) as { data: string | undefined; isLoading: boolean };
 
   // Check if user is owner
   useEffect(() => {

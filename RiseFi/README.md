@@ -5,7 +5,8 @@
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.27-blue.svg)](https://docs.soliditylang.org/)
 [![Foundry](https://img.shields.io/badge/Built%20with-Foundry-FFDB1C.svg)](https://getfoundry.sh/)
 
-Smart contracts for the **RiseFi** DeFi yield vault platform, built with Foundry and featuring **Morpho Blue integration** on Base network.
+Smart contracts for the **RiseFi** DeFi yield vault platform, built with Foundry and featuring **Morpho Blue
+integration** on Base network.
 
 ## 📋 Overview
 
@@ -20,7 +21,7 @@ Smart contracts for the **RiseFi** DeFi yield vault platform, built with Foundry
 - ✅ **Gas optimized** with professional patterns
 - ✅ **Comprehensive testing** with 96+ tests and >95% coverage
 - ✅ **Admin controls** with pause/unpause functionality
-- ✅ **Emergency withdrawal** for critical situations
+- ✅ **ERC-4626 standard pause** with withdrawals allowed during pause
 
 ### Key Features
 
@@ -29,7 +30,7 @@ Smart contracts for the **RiseFi** DeFi yield vault platform, built with Foundry
 - **Slippage Tolerance**: 1% tolerance for withdrawal safety
 - **ERC-4626 Compliance**: Full standard compliance with proper rounding
 - **Admin Controls**: Pause/unpause functionality for emergency situations
-- **Emergency Withdrawal**: Admin can withdraw from Morpho vault to contract
+- **ERC-4626 Standard Pause**: Deposits disabled, withdrawals allowed during pause
 - **Professional Documentation**: Complete NatSpec documentation in English
 
 ## 🚀 Quick Start
@@ -239,7 +240,7 @@ Les tests incluent :
 - Tests de cas limites (edge cases)
 - Tests de fuzzing pour la robustesse
 - Tests de couverture des branches
-- Tests de sécurité (slippage, pause, emergency)
+- Tests de sécurité (slippage, pause, ERC-4626 compliance)
 
 ### Linting et Formatage
 
