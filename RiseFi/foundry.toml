@@ -18,11 +18,9 @@ depth = 15
 optimizer = true
 optimizer_runs = 200
 
-# RPC endpoints configuration
+# RPC endpoints configuration (public only)
 [rpc_endpoints]
 base_public = "https://mainnet.base.org"
-base_private = "${ALCHEMY_BASE_RPC_URL}"
-sepolia = "${ALCHEMY_BASE_SEPOLIA_URL}"
 
 # Environment variables
 [profile.default.env]

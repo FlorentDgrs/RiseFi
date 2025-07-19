@@ -382,8 +382,10 @@ contract RiseFiVault is ERC4626, ReentrancyGuard, Pausable, Ownable {
         uint256 ourMorphoShares = IERC20(address(morphoVault)).balanceOf(address(this));
         uint256 maxMorphoRedeem = morphoVault.maxRedeem(address(this));
 
-        // Inline the min calculation to save gas
-        return morphoVault.convertToAssets(ourMorphoShares > maxMorphoRedeem ? maxMorphoRedeem : ourMorphoShares);
+        // Use unchecked for gas optimization since we're just comparing
+        unchecked {
+            return morphoVault.convertToAssets(ourMorphoShares > maxMorphoRedeem ? maxMorphoRedeem : ourMorphoShares);
+        }
     }
 
     // ========== DISABLED FUNCTIONS ==========

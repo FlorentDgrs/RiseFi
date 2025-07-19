@@ -1,8 +1,8 @@
 # RiseFi Frontend
 
-Modern React/Next.js frontend for the RiseFi DeFi yield vault platform, featuring real-time APY display and seamless wallet integration.
+Modern React/Next.js frontend for RiseFi ERC-4626 yield vault platform.
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 # Install dependencies
@@ -18,7 +18,7 @@ npm run build
 npm run check
 ```
 
-## 🎨 Features
+## Features
 
 - **Real-time APY Display** — Live yield rates from Morpho API
 - **Wallet Integration** — RainbowKit with MetaMask support
@@ -27,7 +27,7 @@ npm run check
 - **Responsive Design** — Mobile-first with Tailwind CSS
 - **Type Safety** — Full TypeScript support
 
-## 📊 Real-time APY Display
+## Real-time APY Display
 
 The `VaultApyDisplay` component shows real-time yield rates from the Morpho vault by querying the public GraphQL API.
 
@@ -85,13 +85,14 @@ const VAULT_ADDRESS = "0x...".toLowerCase();
 - `apy` — Gross annualized yield
 - `rewards.supplyApr` — Rewards APR (if applicable)
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 frontend/
 ├── app/
 │   ├── dashboard/             # Main dashboard page
-│   └── admin/                 # Admin dashboard
+│   ├── admin/                 # Admin dashboard
+│   └── academy/               # Educational content
 ├── components/
 │   ├── shared/                # Reusable components
 │   │   ├── ActionCard.tsx     # Deposit/Withdraw interface
@@ -103,21 +104,22 @@ frontend/
 └── types/                     # TypeScript definitions
 ```
 
-## 🔧 Configuration
+## Configuration
 
-- **Network**: Base network (Chain ID: 8453)
-- **Wallet**: RainbowKit with MetaMask support
-- **Styling**: Tailwind CSS with custom design system
-- **State Management**: React hooks with Wagmi
-- **Build Tool**: Next.js 14 with App Router
+- **Network** — Base network (Chain ID: 8453)
+- **Wallet** — RainbowKit with MetaMask support
+- **Styling** — Tailwind CSS with custom design system
+- **State Management** — React hooks with Wagmi
+- **Build Tool** — Next.js 14 with App Router
 
-## 📱 Pages
+## Pages
 
 - **Dashboard** (`/dashboard`) — Main user interface for deposits/withdrawals
 - **Admin** (`/admin`) — Contract management for vault owner
+- **Academy** (`/academy`) — Educational content and documentation
 - **Home** (`/`) — Landing page with project information
 
-## 🛠️ Development
+## Development
 
 ```bash
 # Install dependencies
@@ -127,7 +129,7 @@ npm install
 npm run dev
 
 # Run type checking
-npm run type-check
+npm run typecheck
 
 # Run linting
 npm run lint
@@ -136,7 +138,7 @@ npm run lint
 npm run build
 ```
 
-## 📦 Dependencies
+## Dependencies
 
 - **Next.js 14** — React framework
 - **Tailwind CSS** — Utility-first CSS

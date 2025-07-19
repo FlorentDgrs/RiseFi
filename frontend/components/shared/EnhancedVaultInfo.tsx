@@ -8,7 +8,7 @@ import Link from "next/link";
 
 const VAULT_ADDRESS = CONTRACTS.RISEFI_VAULT;
 const VAULT_ABI = ABIS.RISEFI_VAULT;
-const MORPHO_VAULT_ADDRESS = "0x3128a0F7f0ea68E7B7c9B00AFa7E41045828e858";
+const MORPHO_VAULT_ADDRESS = CONTRACTS.MORPHO_VAULT;
 
 export default function EnhancedVaultInfo() {
   // Basic vault info
@@ -107,7 +107,7 @@ export default function EnhancedVaultInfo() {
         const query = `
           query {
             vaultByAddress(
-              address: "0x7BfA7C4f149E7415b73bdeDfe609237e29CBF34A"
+              address: "${MORPHO_VAULT_ADDRESS}"
               chainId: 8453
             ) {
               address

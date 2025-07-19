@@ -28,7 +28,7 @@ jobs:
         run: |
           echo "Checking for required files..."
           ls -la lib/utils.ts
-          ls -la utils/generated-abi.ts
+          ls -la abi/RiseFiVault.json
           echo "All required files present!"
       - name: Lint
         run: npm run lint

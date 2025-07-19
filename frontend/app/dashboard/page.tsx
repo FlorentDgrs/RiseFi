@@ -10,7 +10,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import React from "react";
 
-const VAULT_ADDRESS_APY = "0x7BfA7C4f149E7415b73bdeDfe609237e29CBF34A";
+import { CONTRACTS } from "@/utils/contracts";
+
+const VAULT_ADDRESS_APY = CONTRACTS.MORPHO_VAULT;
 const CHAIN_ID = 8453; // Base
 const MORPHO_API_URL = "https://api.morpho.org/graphql";
 

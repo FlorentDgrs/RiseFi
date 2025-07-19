@@ -45,9 +45,9 @@ export function useVaultUserStats() {
   const userShares = (data?.[1] as bigint) ?? BigInt(0);
   const maxRedeem = (data?.[2] as bigint) ?? BigInt(0);
 
-  // Montant investi = convertToAssets(userShares)
+  // Invested amount = convertToAssets(userShares)
   // Max withdrawal = convertToAssets(maxRedeem)
-  // On lit convertToAssets uniquement si userShares > 0
+  // Only read convertToAssets if userShares > 0
   const { data: investedAmount, refetch: refetchInvestedAmount } =
     useReadContracts({
       contracts:
@@ -73,7 +73,7 @@ export function useVaultUserStats() {
     });
 
   // Max withdrawal = convertToAssets(maxRedeem)
-  // On lit convertToAssets pour maxRedeem même si maxRedeem = 0 (pour pause)
+  // Always read convertToAssets for maxRedeem (even if 0 for pause state)
   const { data: maxWithdrawAmount, refetch: refetchMaxWithdraw } =
     useReadContracts({
       contracts: [

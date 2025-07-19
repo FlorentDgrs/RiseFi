@@ -49,23 +49,6 @@ const showErrorToast = (message: string, description?: string) => {
   });
 };
 
-// const showInfoToast = (message: string, description?: string) => {
-//   toast.info(message, {
-//     description,
-//     duration: 3000,
-//     style: {
-//       background: "#1f2937",
-//       color: "#f9fafb",
-//       border: "1px solid #4b5563",
-//       borderLeft: "4px solid #f5c249",
-//       borderRadius: "var(--radius)",
-//       backdropFilter: "blur(8px)",
-//       fontWeight: "500",
-//       boxShadow: "0 4px 12px -2px rgba(0, 0, 0, 0.1)",
-//     },
-//   });
-// };
-
 const showLoadingToast = (message: string, description?: string) => {
   return toast.loading(message, {
     description,

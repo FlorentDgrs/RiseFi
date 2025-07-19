@@ -54,7 +54,7 @@ jobs:
       - name: Run unit tests (local)
         run: |
           echo "=== Running Unit Tests ==="
-          forge test --match-contract 'RiseFiVaultOptimizedTest' --match-test 'test_Optimized_.*' --gas-report
+          forge test --match-contract 'RiseFiVaultTest' --match-test 'test_.*' --gas-report
 
   comprehensive-testing:
     name: Comprehensive Testing Suite
@@ -94,7 +94,7 @@ jobs:
         run: |
           echo "=== Running Comprehensive Test Suite ==="
           forge test \
-            --match-contract 'RiseFiVaultOptimizedTest' \
+            --match-contract 'RiseFiVaultTest' \
             --fork-url https://mainnet.base.org \
             --fork-block-number 32778110 \
             --fork-retry-backoff 300 \

@@ -13,8 +13,7 @@
     "anvil": "cd ../RiseFi && ./scripts/start-anvil.sh",
     "deploy": "cd ../RiseFi && ./scripts/fund-and-deploy.sh",
     "stack": "concurrently \"npm run anvil\" \"wait-on http://localhost:8545 && npm run deploy\" \"wait-on http://localhost:8545 && npm run dev\"",
-    "generate-abi": "node scripts/generate-abi.js",
-    "build-contracts": "cd ../RiseFi && forge build --force && cd ../frontend && npm run generate-abi"
+    "build-contracts": "cd ../RiseFi && forge build --force && cd ../frontend && forge inspect RiseFiVault abi --json > abi/RiseFiVault.json"
   },
   "dependencies": {
     "@morpho-org/blue-sdk": "^4.2.0",

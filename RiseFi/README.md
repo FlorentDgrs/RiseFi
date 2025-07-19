@@ -5,41 +5,30 @@
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.27-blue.svg)](https://docs.soliditylang.org/)
 [![Foundry](https://img.shields.io/badge/Built%20with-Foundry-FFDB1C.svg)](https://getfoundry.sh/)
 
-Smart contracts for the **RiseFi** DeFi yield vault platform, built with Foundry and featuring **Morpho Blue
-integration** on Base network.
+ERC-4626 vault with Morpho Blue integration on Base network.
 
-## 📋 Overview
+## Overview
 
 ### RiseFiVault.sol
 
-**ERC-4626 compliant vault with Morpho Blue integration:**
+ERC-4626 compliant vault with Morpho Blue integration:
 
-- ✅ **Standard ERC-4626 interface** with 6-decimal USDC support
-- ✅ **Morpho Blue integration** for enhanced yields on Base network
-- ✅ **Inflation attack protection** with dead shares mechanism
-- ✅ **Slippage protection** (1% tolerance) for secure withdrawals
-- ✅ **Gas optimized** with professional patterns
-- ✅ **Comprehensive testing** with 96+ tests and >95% coverage
-- ✅ **Admin controls** with pause/unpause functionality
-- ✅ **ERC-4626 standard pause** with withdrawals allowed during pause
+- **Standard ERC-4626 interface** — 6-decimal USDC support
+- **Morpho Blue integration** — Enhanced yields on Base network
+- **Inflation attack protection** — Dead shares mechanism
+- **Slippage protection** — 1% tolerance for withdrawals
+- **Gas optimized** — Professional patterns
+- **Comprehensive testing** — 78 tests with >95% coverage
+- **Admin controls** — Pause/unpause functionality
+- **ERC-4626 standard pause** — Withdrawals allowed during pause
 
-### Key Features
-
-- **Morpho Integration**: Direct integration with Morpho vaults on Base network
-- **Dead Shares Protection**: 1000 dead shares prevent inflation attacks
-- **Slippage Tolerance**: 1% tolerance for withdrawal safety
-- **ERC-4626 Compliance**: Full standard compliance with proper rounding
-- **Admin Controls**: Pause/unpause functionality for emergency situations
-- **ERC-4626 Standard Pause**: Deposits disabled, withdrawals allowed during pause
-- **Professional Documentation**: Complete NatSpec documentation in English
-
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
-- [Foundry](https://getfoundry.sh/) installed
-- [Node.js](https://nodejs.org/) and npm for frontend
-- Base network RPC access for fork testing
+- [Foundry](https://getfoundry.sh/)
+- [Node.js](https://nodejs.org/) and npm (optional, for frontend)
+- Internet connection (for Base mainnet fork)
 
 ### Installation
 
@@ -51,162 +40,103 @@ forge install
 cd ../frontend && npm install
 ```
 
-## 🎯 **DÉPLOIEMENT COMPLET - GUIDE SIMPLIFIÉ**
+## Deployment
 
-### **Option 1: Déploiement Automatisé**
+### Automated Deployment
 
-#### **🐌 Mode Standard (Recommandé pour la production)**
+#### Production Mode (12s blocks)
 
 ```bash
 cd RiseFi
 ./scripts/deploy-complete.sh
 ```
 
-**Caractéristiques :**
-
-- ⏰ Blocks toutes les 12 secondes (comme Base mainnet)
-- 🎯 Parfait pour tester en conditions réelles
-- 🔄 Yields visibles après quelques minutes
-
-#### **⚡ Mode Rapide (Recommandé pour le développement)**
+#### Development Mode (1s blocks)
 
 ```bash
 cd RiseFi
 ./scripts/deploy-fast.sh
 ```
 
-**Caractéristiques :**
-
-- ⏰ Blocks toutes les 1 seconde (12x plus rapide)
-- 🚀 Yields visibles rapidement
-- 🔄 Développement plus efficace
-
-#### **🚀 Mode Ultra-Rapide (Recommandé pour les tests intensifs)**
+#### Test Mode (instant blocks)
 
 ```bash
 cd RiseFi
 ./scripts/deploy-ultra-fast.sh
 ```
 
-**Caractéristiques :**
-
-- ⏰ Blocks instantanés (seulement quand nécessaire)
-- 🚀 Transactions instantanées
-- 🎯 Parfait pour les tests automatisés
-
-**Tous les scripts font automatiquement :**
-
-- 🔄 Démarre Anvil (fork Base network au block 32778110)
-- 🧹 Nettoie les artifacts de build
-- 🏦 Déploie le vault RiseFi
-- 📍 **Affiche l'adresse du vault déployé**
-- 💰 Finance la whale avec ETH
-- 💸 Finance 3 wallets avec 1,000,000 USDC chacun
-- ✅ Vérifie tous les soldes
-- 📋 Affiche un résumé complet
-
-**Résultat attendu :**
-
-```
-🎯 ========================================
-🏦 VAULT RISEFI DÉPLOYÉ AVEC SUCCÈS !
-📍 Adresse: 0x2c90F2f1A1fE7279C0321787A93015bF116Dc36A
-🎯 ========================================
-
-💰 Wallet 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266: 1000000.00 USDC
-💰 Wallet 0x70997970C51812dc3A010C7d01b50e0d17dc79C8: 1000000.00 USDC
-💰 Wallet 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC: 1000000.00 USDC
-
-🔗 Adresses importantes:
-   📍 Vault RiseFi: 0x2c90F2f1A1fE7279C0321787A93015bF116Dc36A
-   📍 USDC: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
-   📍 Whale: 0x122fDD9fEcbc82F7d4237C0549a5057E31c8EF8D
-```
-
-### **Option 2: Déploiement Manuel**
+### Manual Deployment
 
 ```bash
-# 1. Démarrer Anvil
+# Start Anvil (simplified configuration)
 anvil --fork-url https://mainnet.base.org \
       --fork-block-number 32778110 \
       --chain-id 31337 \
-      --port 8545 \
-      --accounts 10 \
-      --balance 10000 \
-      --gas-limit 30000000 \
-      --base-fee 0 \
-      --auto-impersonate
+      --port 8545
 
-# 2. Déployer le vault (dans un autre terminal)
-cd RiseFi
+# Deploy vault
 forge script script/DeployVault.s.sol \
   --rpc-url http://127.0.0.1:8545 \
   --broadcast \
-  --private-key 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d \
-  -v
+  --private-key 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d
 
-# 3. Financer les wallets de test
-forge script script/FundTestWallets.s.sol:FundTestWallets \
+# Fund test wallets
+forge script script/FundTestWallets.s.sol \
   --rpc-url http://127.0.0.1:8545 \
   --broadcast \
-  --unlocked \
-  -v
+  --unlocked
 ```
 
-### **Démarrer le Frontend (Optionnel)**
+### Environment Configuration
+
+The project uses a minimal configuration for local development:
 
 ```bash
-cd ../frontend && npm run dev
+# .env (optional - defaults work out of the box)
+FORK_URL=https://mainnet.base.org
+FORK_BLOCK=32778110
+CHAIN_ID=31337
+PORT=8545
 ```
 
-**Frontend accessible sur :** `http://localhost:3000/dashboard`
+**No API keys required** - uses public RPC endpoints only.
 
-### **Configuration MetaMask**
+## Scripts
 
-- **Réseau** : Local (Chain ID: 31337)
-- **RPC URL** : `http://localhost:8545`
-- **Comptes de test** : Utiliser les clés privées Anvil
+### Shell Scripts
 
-### **Arrêter les Services**
+| Script                 | Description                        | Usage                            |
+| ---------------------- | ---------------------------------- | -------------------------------- |
+| `deploy-complete.sh`   | Production deployment (12s blocks) | `./scripts/deploy-complete.sh`   |
+| `deploy-fast.sh`       | Development deployment (1s blocks) | `./scripts/deploy-fast.sh`       |
+| `deploy-ultra-fast.sh` | Test deployment (instant blocks)   | `./scripts/deploy-ultra-fast.sh` |
+| `stop-all.sh`          | Stop all services                  | `./scripts/stop-all.sh`          |
 
-```bash
-# Arrêter Anvil
-pkill -f anvil
-# ou utiliser le PID affiché lors du démarrage
-kill <PID>
-```
+### Solidity Scripts
 
-## 🔧 **Scripts Disponibles**
+| Script                  | Description                 |
+| ----------------------- | --------------------------- |
+| `DeployVault.s.sol`     | Deploy RiseFi vault         |
+| `FundTestWallets.s.sol` | Fund test wallets with USDC |
 
-### **Scripts Shell (RiseFi/scripts/)**
+## Network Configuration
 
-- **`deploy-complete.sh`** : Déploiement standard (blocks 12s, conditions réelles)
-- **`deploy-fast.sh`** : Déploiement rapide (blocks 1s, développement)
-- **`stop-all.sh`** : Arrêt propre de tous les services (si disponible)
+### Local Network (Anvil - Chain ID: 31337)
 
-### **Scripts Solidity (RiseFi/script/)**
+- **USDC (Base)** — `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`
+- **Morpho Vault** — `0x3128a0F7f0ea68E7B7c9B00AFa7E41045828e858`
+- **Whale USDC** — `0x122fDD9fEcbc82F7d4237C0549a5057E31c8EF8D`
+- **Vault RiseFi** — Displayed during deployment
 
-- **`DeployVault.s.sol`** : Déploiement du vault RiseFi
-- **`FundTestWallets.s.sol`** : Financement des wallets de test avec USDC
+### Test Accounts (Anvil)
 
-## 📊 **Adresses Importantes**
+- **Account 0** — `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`
+- **Account 1** — `0x70997970C51812dc3A010C7d01b50e0d17dc79C8`
+- **Account 2** — `0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC`
 
-### **Réseau Local (Anvil - Chain ID: 31337)**
+Each account is funded with 1,000,000 USDC for testing.
 
-- **USDC (Base)** : `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`
-- **Morpho Vault** : `0x3128a0F7f0ea68E7B7c9B00AFa7E41045828e858`
-- **Whale USDC** : `0x122fDD9fEcbc82F7d4237C0549a5057E31c8EF8D`
-- **Vault RiseFi** : Affiché lors du déploiement (ex: `0x2c90F2f1A1fE7279C0321787A93015bF116Dc36A`)
-
-### **Comptes de Test (Anvil)**
-
-- **Account 0** : `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`
-- **Account 1** : `0x70997970C51812dc3A010C7d01b50e0d17dc79C8`
-- **Account 2** : `0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC`
-
-_Chaque compte est financé avec 1,000,000 USDC pour les tests_
-
-## 🛠️ **Développement**
+## Development
 
 ### Build
 
@@ -217,107 +147,69 @@ forge build
 ### Test
 
 ```bash
-# Tests unitaires (96+ tests, coverage >95%)
+# Unit tests (73 tests, coverage >95%)
 forge test
 
-# Tests avec verbosité
+# Tests with gas reporting
+forge test --gas-report
+
+# Verbose tests
 forge test -vvv
 
-# Tests de couverture
+# Coverage report
 forge coverage
+
+# Comprehensive testing (with fork)
+./scripts/test-comprehensive.sh
 ```
 
-#### Couverture Actuelle
-
-- **Lignes** : >95%
-- **Fonctions** : >95%
-- **Branches** : ~85%
-
-Les tests incluent :
-
-- Tests unitaires pour toutes les fonctions
-- Tests d'intégration avec Morpho
-- Tests de cas limites (edge cases)
-- Tests de fuzzing pour la robustesse
-- Tests de couverture des branches
-- Tests de sécurité (slippage, pause, ERC-4626 compliance)
-
-### Linting et Formatage
+### Linting
 
 ```bash
-# Formater le code Solidity
+# Format Solidity code
 forge fmt
 
-# Vérifier le formatage
+# Check formatting
 forge fmt --check
 ```
 
-## 📁 **Structure du Projet**
+## Project Structure
 
 ```
 RiseFi/
 ├── scripts/
-│   └── deploy-complete.sh    # 🚀 Déploiement complet automatisé
+│   ├── deploy-complete.sh    # Production deployment (12s blocks)
+│   ├── deploy-fast.sh        # Development deployment (1s blocks)
+│   ├── deploy-ultra-fast.sh  # Test deployment (0s blocks)
+│   ├── stop-all.sh           # Stop all services
+│   └── test-comprehensive.sh # Comprehensive testing
 ├── script/
-│   ├── DeployVault.s.sol     # 🏦 Déploiement vault
-│   └── FundTestWallets.s.sol # 💰 Financement wallets
+│   ├── DeployVault.s.sol     # Vault deployment
+│   └── FundTestWallets.s.sol # Wallet funding
 ├── src/
-│   └── RiseFiVault.sol       # 📜 Contrat principal ERC-4626
+│   └── RiseFiVault.sol       # Main ERC-4626 contract
 ├── test/
-│   └── RiseFiVaultOptimized.t.sol # 🧪 Tests complets (96+ tests)
-├── lib/                      # 📚 Dépendances Foundry
-├── out/                      # 🏗️ Artifacts de build
-├── cache/                    # 💾 Cache Foundry
-└── broadcast/                # 📡 Logs de déploiement
+│   └── RiseFiVault.t.sol     # 73 comprehensive tests
+├── lib/                      # Foundry dependencies
+├── out/                      # Build artifacts
+├── cache/                    # Foundry cache
+├── .env                      # Minimal environment config
+├── foundry.toml              # Foundry configuration
+├── LICENSE                   # MIT License
+├── README.md                 # This file
+├── DOCUMENTATION_FONCTIONS.md # Detailed function docs
+├── RAPPORT_SECURITE_COMPLET.md # Security report
+└── GUIDE_TESTS_FOUNDRY.md    # Testing guide
 ```
 
-## 🎯 **Workflow Recommandé**
+## Contributing
 
-### **Pour le Développement**
+1. Fork the project
+2. Create feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit changes (`git commit -m 'Add AmazingFeature'`)
+4. Push to branch (`git push origin feature/AmazingFeature`)
+5. Open Pull Request
 
-1. **Déploiement** :
-   - Production : `./scripts/deploy-complete.sh`
-   - Développement : `./scripts/deploy-fast.sh`
-2. **Tests** : `forge test`
-3. **Frontend** : `cd ../frontend && npm run dev` (optionnel)
-4. **Nettoyage** : `pkill -f anvil`
+## License
 
-### **Pour les Tests**
-
-1. **Tests unitaires** : `forge test`
-2. **Tests avec traces** : `forge test -vvv`
-3. **Couverture** : `forge coverage`
-4. **Tests spécifiques** : `forge test --match-test testFunctionName`
-
-## 📝 **Notes Techniques**
-
-- **Réseau** : Fork de Base mainnet (block 32778110)
-- **Tokens** : USDC (6 décimales) → rfUSDC (18 décimales)
-- **Sécurité** : Protection contre les attaques d'inflation avec dead shares
-- **Gas** : Optimisé pour les coûts de transaction
-- **Tests** : Couverture complète avec cas limites et fuzz testing
-- **Architecture** : ERC-4626 compliant avec intégration Morpho Blue
-
-## 🔒 **Sécurité**
-
-- **Audits** : Tests exhaustifs avec >95% de couverture
-- **Protection** : Dead shares contre les attaques d'inflation
-- **Slippage** : Protection 1% sur les retraits
-- **Pause** : Mécanisme d'urgence pour arrêter les opérations
-- **Accès** : Contrôles d'accès avec OpenZeppelin Ownable
-
-## 🤝 **Contribution**
-
-1. Fork le projet
-2. Créer une branche feature (`git checkout -b feature/AmazingFeature`)
-3. Commit les changements (`git commit -m 'Add some AmazingFeature'`)
-4. Push vers la branche (`git push origin feature/AmazingFeature`)
-5. Ouvrir une Pull Request
-
-## 📄 **License**
-
-Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
-
----
-
-**Développé avec ❤️ par l'équipe RiseFi**
+MIT License - see [LICENSE](LICENSE) file for details.
