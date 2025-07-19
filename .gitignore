@@ -6,6 +6,9 @@ cache/
 artifacts/
 *.t.sol.json
 
+# Node modules (should not be committed)
+node_modules/
+
 # Cursor Rules (private, not for commit)
 .cursorrules
 

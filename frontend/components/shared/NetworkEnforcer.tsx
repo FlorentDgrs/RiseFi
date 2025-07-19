@@ -19,11 +19,11 @@ export function NetworkEnforcer() {
   if (isConnected && chainId !== ANVIL_CHAIN_ID) {
     return (
       <div className="fixed top-0 left-0 right-0 bg-red-600 text-white p-3 text-center z-50">
-        ⚠️ Mauvais réseau détecté. Basculement vers Anvil (chainId:{" "}
-        {ANVIL_CHAIN_ID})...
+        ⚠️ Wrong network detected. Switching to Anvil (chainId: {ANVIL_CHAIN_ID}
+        )...
       </div>
     );
   }
 
-  return null; // Ce composant ne rend rien visuellement quand tout va bien
+  return null; // This component doesn't render anything visually when everything is fine
 }
