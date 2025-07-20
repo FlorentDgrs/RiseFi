@@ -12,7 +12,7 @@ import React from "react";
 
 import { CONTRACTS } from "@/utils/contracts";
 
-const VAULT_ADDRESS_APY = CONTRACTS.MORPHO_VAULT;
+const VAULT_ADDRESS_APY = CONTRACTS.MORPHO_VAULT_APY;
 const CHAIN_ID = 8453; // Base
 const MORPHO_API_URL = "https://api.morpho.org/graphql";
 

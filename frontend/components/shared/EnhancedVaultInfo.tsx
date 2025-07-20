@@ -3,12 +3,13 @@
 import { useReadContract } from "wagmi";
 import { formatUnits } from "viem";
 import { ABIS, CONTRACTS, CONSTANTS } from "@/utils/contracts";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 
 const VAULT_ADDRESS = CONTRACTS.RISEFI_VAULT;
 const VAULT_ABI = ABIS.RISEFI_VAULT;
 const MORPHO_VAULT_ADDRESS = CONTRACTS.MORPHO_VAULT;
+const MORPHO_VAULT_APY_ADDRESS = CONTRACTS.MORPHO_VAULT_APY;
 
 export default function EnhancedVaultInfo() {
   // Basic vault info
@@ -36,11 +37,11 @@ export default function EnhancedVaultInfo() {
     functionName: "BASIS_POINTS",
   }) as { data: bigint | undefined };
 
-  const { data: isPaused } = useReadContract({
+  const { data: isPaused, refetch: refetchPauseStatus } = useReadContract({
     address: VAULT_ADDRESS,
     abi: VAULT_ABI,
     functionName: "isPaused",
-  }) as { data: boolean | undefined };
+  }) as { data: boolean | undefined; refetch: () => void };
 
   const { data: deadAddress } = useReadContract({
     address: VAULT_ADDRESS,
@@ -55,33 +56,34 @@ export default function EnhancedVaultInfo() {
   }) as { data: string | undefined };
 
   // Enhanced vault metrics
-  const { data: totalSupply } = useReadContract({
+  const { data: totalSupply, refetch: refetchTotalSupply } = useReadContract({
     address: VAULT_ADDRESS,
     abi: VAULT_ABI,
     functionName: "totalSupply",
-  }) as { data: bigint | undefined };
+  }) as { data: bigint | undefined; refetch: () => void };
 
-  const { data: totalAssets } = useReadContract({
+  const { data: totalAssets, refetch: refetchTotalAssets } = useReadContract({
     address: VAULT_ADDRESS,
     abi: VAULT_ABI,
     functionName: "totalAssets",
-  }) as { data: bigint | undefined };
+  }) as { data: bigint | undefined; refetch: () => void };
 
-  // Morpho vault shares held by RiseFi
-  const { data: morphoSharesBalance } = useReadContract({
-    address: MORPHO_VAULT_ADDRESS,
-    abi: [
-      {
-        name: "balanceOf",
-        type: "function",
-        stateMutability: "view",
-        inputs: [{ name: "account", type: "address" }],
-        outputs: [{ name: "", type: "uint256" }],
-      },
-    ],
-    functionName: "balanceOf",
-    args: [VAULT_ADDRESS],
-  }) as { data: bigint | undefined };
+  // Morpho vault shares held by RiseFi - read from Morpho vault
+  const { data: morphoSharesBalance, refetch: refetchMorphoShares } =
+    useReadContract({
+      address: MORPHO_VAULT_ADDRESS,
+      abi: [
+        {
+          name: "balanceOf",
+          type: "function",
+          stateMutability: "view",
+          inputs: [{ name: "account", type: "address" }],
+          outputs: [{ name: "", type: "uint256" }],
+        },
+      ],
+      functionName: "balanceOf",
+      args: [VAULT_ADDRESS],
+    }) as { data: bigint | undefined; refetch: () => void };
 
   // Calculate effective shares (total supply minus dead shares)
   const effectiveShares =
@@ -98,6 +100,70 @@ export default function EnhancedVaultInfo() {
   // Use the same APY as dashboard (from Morpho API)
   const [apy, setApy] = useState<number | null>(null);
   const [apyLoading, setApyLoading] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Auto-refresh function
+  const refreshData = useCallback(() => {
+    setIsRefreshing(true);
+
+    // Refresh all contract data
+    refetchTotalSupply?.();
+    refetchTotalAssets?.();
+    refetchMorphoShares?.();
+    refetchPauseStatus?.();
+
+    // Refresh APY data
+    const fetchApy = async () => {
+      try {
+        const query = `
+          query {
+            vaultByAddress(
+              address: "${MORPHO_VAULT_APY_ADDRESS}"
+              chainId: 8453
+            ) {
+              address
+              state {
+                netApy
+                apy
+              }
+            }
+          }
+        `;
+        const response = await fetch("https://api.morpho.org/graphql", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query }),
+        });
+        const data = await response.json();
+        const vault = data?.data?.vaultByAddress;
+        const netApy = vault?.state?.netApy ?? vault?.state?.apy;
+        if (typeof netApy === "number") {
+          setApy(netApy);
+        } else {
+          setApy(null);
+        }
+      } catch {
+        setApy(null);
+      } finally {
+        setIsRefreshing(false);
+      }
+    };
+
+    fetchApy();
+    setLastRefresh(new Date());
+  }, [
+    refetchTotalSupply,
+    refetchTotalAssets,
+    refetchMorphoShares,
+    refetchPauseStatus,
+  ]);
+
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(refreshData, 30000);
+    return () => clearInterval(interval);
+  }, [refreshData]);
 
   // Fetch APY from Morpho API (same as dashboard)
   useEffect(() => {
@@ -107,7 +173,7 @@ export default function EnhancedVaultInfo() {
         const query = `
           query {
             vaultByAddress(
-              address: "${MORPHO_VAULT_ADDRESS}"
+              address: "${MORPHO_VAULT_APY_ADDRESS}"
               chainId: 8453
             ) {
               address
@@ -143,9 +209,40 @@ export default function EnhancedVaultInfo() {
 
   return (
     <div className="w-full p-6 rounded-2xl bg-gray-900/90 border border-[#f5c249] shadow-xl">
-      <h2 className="text-xl font-bold text-[#f5c249] mb-6">
-        RiseFi Vault Information
-      </h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-bold text-[#f5c249]">
+          RiseFi Vault Information
+        </h2>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-gray-500">
+            Last refresh: {lastRefresh.toLocaleTimeString()}
+          </span>
+          <button
+            onClick={refreshData}
+            disabled={isRefreshing}
+            className={`p-2 transition-colors ${
+              isRefreshing
+                ? "text-[#f5c249] cursor-not-allowed"
+                : "text-gray-400 hover:text-[#f5c249]"
+            }`}
+            title={isRefreshing ? "Refreshing..." : "Refresh data"}
+          >
+            <svg
+              className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
 
       {/* Status Banner */}
       <div
@@ -276,6 +373,10 @@ export default function EnhancedVaultInfo() {
             </Link>
           </div>
           <div className="text-xs text-gray-500 mt-1">From Morpho vault</div>
+          <div className="text-xs text-gray-600 mt-1">
+            APY Address: {MORPHO_VAULT_APY_ADDRESS.slice(0, 8)}...
+            {MORPHO_VAULT_APY_ADDRESS.slice(-6)}
+          </div>
         </div>
 
         {/* Morpho Shares */}
@@ -290,6 +391,10 @@ export default function EnhancedVaultInfo() {
           </div>
           <div className="text-xs text-gray-500 mt-1">
             Shares held by RiseFi in Morpho vault
+          </div>
+          <div className="text-xs text-gray-600 mt-1">
+            Shares Address: {MORPHO_VAULT_ADDRESS.slice(0, 8)}...
+            {MORPHO_VAULT_ADDRESS.slice(-6)}
           </div>
         </div>
       </div>

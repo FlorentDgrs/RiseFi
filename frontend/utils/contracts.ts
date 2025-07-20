@@ -6,7 +6,8 @@ import { RISEFI_VAULT_ABI_TYPED } from "./abi";
 export const CONTRACTS = {
   USDC: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
   RISEFI_VAULT: "0x2c90f2f1a1fe7279c0321787a93015bf116dc36a",
-  MORPHO_VAULT: "0x7BfA7C4f149E7415b73bdeDfe609237e29CBF34A", // For APY display
+  MORPHO_VAULT: "0x3128a0F7f0ea68E7B7c9B00AFa7E41045828e858", // For shares reading
+  MORPHO_VAULT_APY: "0x7BfA7C4f149E7415b73bdeDfe609237e29CBF34A", // For APY API
 } as const;
 
 // Network configuration for local development
